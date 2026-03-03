@@ -1494,6 +1494,85 @@
             }, 200);
         };
 
+        window._renderAnalysisMobile = (processedList, recentHeaders, getWedStr) => {
+            const mobileEl = document.getElementById('analysisTableMobile');
+            const labelEl = document.getElementById('analysisPeriodLabel');
+            if (!mobileEl) return;
+            const idx = appState._analysisPeriodIdx || 0;
+            const h = recentHeaders[idx];
+            const prevH = idx > 0 ? recentHeaders[idx - 1] : null;
+            if (!h) { mobileEl.innerHTML = '<p class="p-4 text-xs text-gray-400">데이터 없음</p>'; return; }
+            if (labelEl) labelEl.textContent = getWedStr(h);
+
+            const sorted = [...processedList].sort((a, b) => {
+                const sa = Math.round(Number(a.suro?.[h])) || 0;
+                const sb = Math.round(Number(b.suro?.[h])) || 0;
+                return sb - sa;
+            });
+
+            const maxScore = sorted.length > 0 ? (Math.round(Number(sorted[0].suro?.[h])) || 1) : 1;
+
+            let html = `<div class="divide-y divide-gray-50">`;
+            sorted.forEach((m, i) => {
+                const score = Math.round(Number(m.suro?.[h])) || 0;
+                const prev = prevH ? (Math.round(Number(m.suro?.[prevH])) || 0) : 0;
+                const barPct = Math.max((score / maxScore) * 100, 0);
+                let diffHtml = '';
+                if (prev > 0 && score > 0) {
+                    const pct = ((score - prev) / prev * 100);
+                    if (score > prev) diffHtml = `<span class="text-red-500 text-[9px]">▲${pct.toFixed(1)}%</span>`;
+                    else if (score < prev) diffHtml = `<span class="text-blue-500 text-[9px]">▼${Math.abs(pct).toFixed(1)}%</span>`;
+                    else diffHtml = `<span class="text-gray-400 text-[9px]">-</span>`;
+                } else if (score > 0 && prev === 0) {
+                    diffHtml = `<span class="text-emerald-500 text-[9px]">NEW</span>`;
+                }
+
+                const rankBg = i === 0 ? 'bg-amber-50 border-l-4 border-amber-400' : i === 1 ? 'bg-gray-50 border-l-4 border-gray-400' : i === 2 ? 'bg-orange-50/50 border-l-4 border-orange-300' : '';
+                const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span class="text-[9px] text-gray-400">${i+1}</span>`;
+
+                html += `<div class="px-3 py-2 ${rankBg} ${score === 0 ? 'opacity-40' : ''}" onclick="window.showPersonalSuro('${m.name}')">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-5 text-center shrink-0">${rankIcon}</span>
+                            <span class="text-[11px] font-bold text-gray-800 truncate">${m.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${diffHtml}
+                            <span class="text-[11px] font-mono font-bold ${score === 0 ? 'text-red-400' : 'text-gray-800'}">${score > 0 ? score.toLocaleString() : '0'}</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-amber-400' : i < 3 ? 'bg-pink-400' : score === 0 ? 'bg-red-300' : 'bg-pink-300'}" style="width:${barPct}%"></div>
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+            mobileEl.innerHTML = html;
+        };
+
+        window._analysisPeriodPrev = () => {
+            const max = (appState.suroHeaders || []).length - 1;
+            if ((appState._analysisPeriodIdx || 0) > 0) {
+                appState._analysisPeriodIdx--;
+                window.renderAnalysis(document.getElementById('contentArea'), appState.analysisGuild);
+            }
+        };
+        window._analysisPeriodNext = () => {
+            const max = (appState.suroHeaders || []).length - 1;
+            if ((appState._analysisPeriodIdx || 0) < max) {
+                appState._analysisPeriodIdx++;
+                window.renderAnalysis(document.getElementById('contentArea'), appState.analysisGuild);
+            }
+        };
+
+        window._origSetAnalysisSearch = (val) => {
+            appState.analysisFilters.search = val;
+            if (window._analysisSearchTimer) clearTimeout(window._analysisSearchTimer);
+            window._analysisSearchTimer = setTimeout(() => {
+                window.updateAnalysisTable();
+            }, 200);
+        };
+
         window.updateAnalysisTable = () => {
             const tbody = document.getElementById('analysisTableBody');
             if (!tbody) return;
@@ -1822,10 +1901,21 @@
                     <div class="bg-white rounded-xl lg:rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden h-full relative">
                         <div class="p-3 lg:p-4 border-b border-gray-50 flex justify-between items-center shrink-0 bg-white relative z-40">
                             <h3 class="text-[10px] lg:text-xs font-bold text-gray-800 uppercase tracking-widest">전체 데이터 (누적)</h3>
-                            <button onclick="window.expandTable()" class="text-[9px] text-gray-300 hover:text-pink-400 transition-colors flex items-center gap-1 font-bold"><i class="fas fa-expand-alt"></i> 확대</button>
+                            <div class="flex items-center gap-2">
+                                <div class="sm:hidden flex items-center gap-1">
+                                    <button onclick="window._analysisPeriodPrev()" class="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100"><i class="fas fa-chevron-left text-[9px]"></i></button>
+                                    <span class="text-[9px] font-bold text-emerald-600 min-w-[70px] text-center" id="analysisPeriodLabel"></span>
+                                    <button onclick="window._analysisPeriodNext()" class="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100"><i class="fas fa-chevron-right text-[9px]"></i></button>
+                                </div>
+                                <button onclick="window.expandTable()" class="text-[9px] text-gray-300 hover:text-pink-400 transition-colors flex items-center gap-1 font-bold"><i class="fas fa-expand-alt"></i> 확대</button>
+                            </div>
                         </div>
                         <div id="analysisTableWrapper" class="flex-1 overflow-auto bg-white scroll-smooth relative">
-                            <table class="w-full text-left text-xs whitespace-nowrap stick-head">
+                            ${(() => {
+                                const isMobile = false;
+                                return '';
+                            })()}
+                            <table class="w-full text-left text-xs whitespace-nowrap stick-head hidden sm:table" id="analysisTablePC">
                                 <thead class="text-[10px] text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th class="p-3 text-center min-w-[50px] bg-gray-50">RANK</th>
@@ -1885,17 +1975,25 @@
                                     }).join('')}
                                 </tbody>
                             </table>
+
+                            <div class="sm:hidden" id="analysisTableMobile">
+                            </div>
                         </div>
                     </div>
                 </div>
                 </div>
             </div>`;
 
+            if (!appState._analysisPeriodIdx) appState._analysisPeriodIdx = recentHeaders.length - 1;
+            if (appState._analysisPeriodIdx >= recentHeaders.length) appState._analysisPeriodIdx = recentHeaders.length - 1;
+            if (appState._analysisPeriodIdx < 0) appState._analysisPeriodIdx = 0;
+
             setTimeout(() => {
                 const tableWrapper = document.getElementById('analysisTableWrapper');
                 if (tableWrapper) {
                     tableWrapper.scrollLeft = tableWrapper.scrollWidth;
                 }
+                window._renderAnalysisMobile(processedList, recentHeaders, getWedStr);
             }, 100);
 
             const ctx = document.getElementById('analysisChart');
