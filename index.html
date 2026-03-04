@@ -4163,16 +4163,21 @@
   window._boardToggleLike = async (postId) => {
     if (!CURRENT_USER) return window.showMsg('로그인이 필요합니다.', 'error');
     try {
-      const {data: existing} = await supaDb.from('board_likes').select('id').eq('post_id', postId).eq('user_email', CURRENT_USER.email).maybeSingle();
+      const {data: existing, error: selErr} = await supaDb.from('board_likes').select('id').eq('post_id', postId).eq('user_email', CURRENT_USER.email).maybeSingle();
+      if (selErr) throw selErr;
       if (existing) {
-        await supaDb.from('board_likes').delete().eq('id', existing.id);
-        await supaDb.from('board_posts').update({like_count: Math.max(0, (parseInt(document.getElementById('boardLikeCount')?.textContent)||1) - 1)}).eq('id', postId);
+        const {error: delErr} = await supaDb.from('board_likes').delete().eq('id', existing.id);
+        if (delErr) throw delErr;
+        const {error: upErr} = await supaDb.from('board_posts').update({like_count: Math.max(0, (parseInt(document.getElementById('boardLikeCount')?.textContent)||1) - 1)}).eq('id', postId);
+        if (upErr) throw upErr;
       } else {
-        await supaDb.from('board_likes').insert({post_id: postId, user_email: CURRENT_USER.email});
-        await supaDb.from('board_posts').update({like_count: (parseInt(document.getElementById('boardLikeCount')?.textContent)||0) + 1}).eq('id', postId);
+        const {error: insErr} = await supaDb.from('board_likes').insert({post_id: postId, user_email: CURRENT_USER.email});
+        if (insErr) throw insErr;
+        const {error: upErr} = await supaDb.from('board_posts').update({like_count: (parseInt(document.getElementById('boardLikeCount')?.textContent)||0) + 1}).eq('id', postId);
+        if (upErr) throw upErr;
       }
       window._boardViewPost(postId);
-    } catch(e) { window.showMsg('추천 처리 실패', 'error'); }
+    } catch(e) { window.showMsg('추천 실패: ' + e.message, 'error'); console.error('Like error:', e); }
   };
 
   // === 댓글 ===
