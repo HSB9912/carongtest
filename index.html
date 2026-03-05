@@ -2391,11 +2391,12 @@
                 const _rtc = _rd.textColor || '';
                 const _rbc = _rd.bgColor || '';
                 let roleHtml = '';
-                if (!appState.isBatchMode && (_rbc || _rtc)) {
+                if (!appState.isBatchMode) {
                     let rstyle = '';
-                    if (_rbc) { rstyle += 'background-color:' + _rbc + ';'; if (!_rtc) rstyle += 'color:white;'; }
-                    if (_rtc) rstyle += 'color:' + _rtc + ';';
-                    roleHtml = `<span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold tracking-tight shadow-sm" style="${rstyle}text-shadow:0 1px 1px rgba(0,0,0,0.08);">${m.role}</span>`;
+                    if (_rbc) { rstyle += 'background-color:' + _rbc + ';'; rstyle += 'color:' + (_rtc || 'white') + ';'; }
+                    else if (_rtc) { rstyle += 'color:' + _rtc + ';background:#f3f4f6;'; }
+                    else { rstyle += 'background:#f3f4f6;color:#6b7280;'; }
+                    roleHtml = `<span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold tracking-tight" style="${rstyle}">${m.role}</span>`;
                 } else {
                     roleHtml = `<span class="text-[10px]">${m.role}</span>`;
                 }
