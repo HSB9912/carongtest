@@ -4099,20 +4099,31 @@
     const bottom5 = ranked.slice(-5).map(m => m.name);
     const results = ranked.map((m, i) => {
       const rank = i + 1;
-      let grade = '', reward = '', benefit = '';
+      let grade = '', reward = '', benefit = '', rewardNote = '';
+      const ratio = m.isNewbie ? m.activeWeeks / m.weeks : 1;
       if (rank <= 13) {
         const tier = REWARD_TIERS[i];
         grade = tier.grade;
         if (piecePrice > 0) {
           const poolBil = tier.pool * 100000000;
-          const pieces = Math.round((poolBil * tier.ratio) / (piecePrice * 10000));
+          let pieces = Math.round((poolBil * tier.ratio) / (piecePrice * 10000));
+          if (m.isNewbie) {
+            const original = pieces;
+            pieces = Math.round(pieces * ratio);
+            rewardNote = `(${original}→${pieces}, ${Math.round(ratio*100)}%)`;
+          }
           reward = pieces.toLocaleString() + '개';
         } else {
           reward = `비율 ${(tier.ratio * 100).toFixed(0)}%`;
         }
         benefit = tier.benefit || REWARD_TIERS.find(t => t.grade === grade && t.benefit)?.benefit || '';
       } else if (m.avg >= 135000) {
-        grade = '티라미슈'; reward = '숫돌 24개'; benefit = '전체면제 + 숫돌24개';
+        grade = '티라미슈';
+        if (m.isNewbie) {
+          const adj = Math.round(24 * ratio);
+          reward = `숫돌 ${adj}개`; rewardNote = `(24→${adj}, ${Math.round(ratio*100)}%)`;
+        } else { reward = '숫돌 24개'; }
+        benefit = '전체면제 + 숫돌';
       } else if (m.avg >= 90000) {
         grade = '크로칸슈'; reward = '-'; benefit = '전체면제';
       } else if (m.avg >= 55000) {
@@ -4120,7 +4131,7 @@
       } else {
         grade = '팬케이크'; reward = '-'; benefit = bottom5.includes(m.name) ? '부캐면제 X' : '';
       }
-      return { ...m, rank, grade, reward, benefit };
+      return { ...m, rank, grade, reward, benefit, rewardNote };
     });
 
     const gc = (grade) => gradeColors[grade] || gradeColors['팬케이크'];
@@ -4163,7 +4174,7 @@
         <td class="py-2 px-2 font-bold text-gray-800">${r.name}</td>
         <td class="py-2 px-2 text-right font-mono">${r.avg.toLocaleString()}</td>
         <td class="py-2 px-2 text-right text-gray-400 hidden sm:table-cell">${r.participated}/${r.activeWeeks}주${r.isNewbie ? ' <span class="text-[8px] text-blue-500 bg-blue-50 px-1 rounded">신규</span>' : ''}</td>
-        <td class="py-2 px-2 text-right font-bold ${r.reward !== '-' ? 'text-amber-600' : 'text-gray-400'}">${r.reward}</td>
+        <td class="py-2 px-2 text-right font-bold ${r.reward !== '-' ? 'text-amber-600' : 'text-gray-400'}">${r.reward}${r.rewardNote ? '<br><span class="text-[8px] text-gray-400 font-normal">' + r.rewardNote + '</span>' : ''}</td>
         <td class="py-2 px-2 text-[9px] text-gray-400 hidden lg:table-cell">${r.benefit}</td>
       </tr>`;
     });
