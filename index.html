@@ -74,6 +74,7 @@
    <button onclick="router('members')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="members"><i class="fas fa-users w-5 text-center text-xs"></i><span>길드원</span></button>
    <button onclick="router('analysis')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="analysis"><i class="fas fa-chart-line w-5 text-center text-xs"></i><span>수로 분석</span></button>
    <button onclick="router('guild_stats')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="guild_stats"><i class="fas fa-chart-pie w-5 text-center text-xs"></i><span>길드 현황</span></button>
+   <button onclick="router('suro_reward')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="suro_reward"><i class="fas fa-gift w-5 text-center text-xs"></i><span>수로 보상</span></button>
    <button onclick="router('board')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="board"><i class="fas fa-clipboard w-5 text-center text-xs"></i><span>게시판</span></button>
    <button onclick="router('bail')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="bail"><i class="fas fa-gem w-5 text-center text-xs"></i><span>보석금</span></button>
    <button onclick="router('penalty')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="penalty"><i class="fas fa-exclamation-triangle w-5 text-center text-xs"></i><span>벌점</span></button>
@@ -1206,12 +1207,13 @@
             const content = document.getElementById('contentArea'); if(!content) return;
             content.innerHTML = '';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.target === tab));
-            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', board: '게시판', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
+            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', suro_reward: '수로 보상', board: '게시판', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
             document.getElementById('pageTitle').innerText = titles[tab] || '';
             if (tab === 'home') window.renderHome(content);
             else if (tab === 'members') window.renderMembers(content);
             else if (tab === 'analysis') window.renderAnalysis(content, appState.analysisGuild);
             else if (tab === 'guild_stats') window.renderGuildStats(content);
+            else if (tab === 'suro_reward') window.renderSuroReward(content);
             else if (tab === 'board') window.renderBoard(content);
             else if (tab === 'suro_input' && isAdmin()) window.renderSuroInput(content);
             else if (tab === 'bail') window.renderBail(content);
@@ -3989,6 +3991,190 @@
   const BOARD_PER_PAGE = 10;
   const BOARD_STORAGE_URL = SUPABASE_URL + '/storage/v1/object/public/board-images/';
 
+  // ============ 수로 보상 ============
+  const REWARD_TIERS = [
+    { grade: '크라운', rank: '1등', ratio: 0.45, pool: 150, benefit: '부캐면제 + 부캐길드면제' },
+    { grade: '크라운', rank: '2등', ratio: 0.33, pool: 150, benefit: '' },
+    { grade: '크라운', rank: '3등', ratio: 0.22, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '4등', ratio: 0.15, pool: 150, benefit: '뚱카롱 부캐1캐릭면제 + 부캐길드면제' },
+    { grade: '파르페', rank: '5등', ratio: 0.14, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '6등', ratio: 0.13, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '7등', ratio: 0.12, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '8등', ratio: 0.11, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '9등', ratio: 0.10, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '10등', ratio: 0.09, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '11등', ratio: 0.06, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '12등', ratio: 0.05, pool: 150, benefit: '' },
+    { grade: '파르페', rank: '13등', ratio: 0.05, pool: 150, benefit: '' },
+  ];
+  const SCORE_TIERS = [
+    { grade: '티라미슈', label: '상급 길드원', minScore: 135000, pieces: '숫돌 24개', benefit: '전체면제 + 숫돌24개(분기)' },
+    { grade: '크로칸슈', label: '중급 길드원', minScore: 90000, pieces: '-', benefit: '전체면제' },
+    { grade: '롤케이크', label: '평길드원', minScore: 55000, pieces: '-', benefit: '절반면제' },
+    { grade: '팬케이크', label: '강등 위험조', minScore: 0, pieces: '-', benefit: '부캐면제 X (하위 5명)' },
+  ];
+
+  window.renderSuroReward = (container) => {
+    const headers = appState.suroHeaders || [];
+    const members = appState.members.filter(m => m.guild === '뚠카롱' && m.isMain);
+    const rewardCfg = SITE_CONFIG?.suroReward || {};
+    const piecePrice = rewardCfg.piecePrice || 0;
+
+    // 분기 계산: 1분기(1~3월), 2분기(4~6월), 3분기(7~9월), 4분기(10~12월)
+    // 주차 헤더에서 분기 그룹핑
+    const quarterMap = {};
+    headers.forEach(h => {
+      const match = h.match(/(\d{2})-(\d{2})-(\d{2})/);
+      if (match) {
+        const yr = parseInt(match[1]) + 2000;
+        const mo = parseInt(match[2]);
+        const q = Math.ceil(mo / 3);
+        const key = `${yr}년 ${q}분기`;
+        if (!quarterMap[key]) quarterMap[key] = [];
+        quarterMap[key].push(h);
+      }
+    });
+    const quarters = Object.keys(quarterMap).sort().reverse();
+    const selQ = rewardCfg._selectedQ || quarters[0] || '';
+
+    container.innerHTML = `
+    <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar" id="rewardRoot">
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 lg:p-4 flex items-center gap-3 flex-wrap shrink-0">
+        <h3 class="text-sm font-bold text-gray-800"><i class="fas fa-gift mr-2 text-amber-400"></i>수로 보상체계</h3>
+        <select id="rewardQuarter" onchange="window._rewardChangeQ()" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-[11px] font-bold outline-none">
+          ${quarters.map(q => `<option value="${q}" ${q===selQ?'selected':''}>${q}</option>`).join('')}
+        </select>
+        ${piecePrice > 0 ? `<span class="text-[10px] text-gray-400 font-bold ml-auto">조각 시세: ${piecePrice.toLocaleString()}만원</span>` : '<span class="text-[10px] text-red-400 font-bold ml-auto">⚠ 조각 시세 미설정 (설정 → 관리자)</span>'}
+      </div>
+      <div id="rewardContent"></div>
+    </div>`;
+
+    window._rewardRender(selQ, quarterMap, members, piecePrice);
+  };
+
+  window._rewardChangeQ = () => {
+    const q = document.getElementById('rewardQuarter')?.value;
+    if (q) {
+      if (!SITE_CONFIG.suroReward) SITE_CONFIG.suroReward = {};
+      SITE_CONFIG.suroReward._selectedQ = q;
+      window.renderSuroReward(document.getElementById('contentArea'));
+    }
+  };
+
+  window._rewardRender = (selQ, quarterMap, members, piecePrice) => {
+    const wrap = document.getElementById('rewardContent');
+    if (!wrap) return;
+    const qHeaders = quarterMap[selQ] || [];
+
+    if (qHeaders.length === 0) {
+      wrap.innerHTML = '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-gray-400 text-xs font-bold">해당 분기 데이터가 없습니다.</div>';
+      return;
+    }
+
+    // 분기 평균 점수 계산
+    const ranked = members.map(m => {
+      const scores = qHeaders.map(h => Math.round(Number(m.suro?.[h])) || 0);
+      const participated = scores.filter(s => s > 0);
+      const avg = participated.length > 0 ? Math.round(participated.reduce((a,b)=>a+b,0) / qHeaders.length) : 0;
+      const total = scores.reduce((a,b)=>a+b, 0);
+      return { name: m.name, avg, total, weeks: qHeaders.length, participated: participated.length, role: m.role };
+    }).sort((a,b) => b.avg - a.avg);
+
+    // 등급 배정
+    const gradeColors = {
+      '크라운': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-400' },
+      '파르페': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-400' },
+      '티라미슈': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-400' },
+      '크로칸슈': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-400' },
+      '롤케이크': { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-400' },
+      '팬케이크': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-600', badge: 'bg-gray-400' },
+    };
+
+    const bottom5 = ranked.slice(-5).map(m => m.name);
+    const results = ranked.map((m, i) => {
+      const rank = i + 1;
+      let grade = '', reward = '', benefit = '';
+      if (rank <= 13) {
+        const tier = REWARD_TIERS[i];
+        grade = tier.grade;
+        if (piecePrice > 0) {
+          const poolBil = tier.pool * 100000000;
+          const pieces = Math.round((poolBil * tier.ratio) / (piecePrice * 10000));
+          reward = pieces.toLocaleString() + '개';
+        } else {
+          reward = `비율 ${(tier.ratio * 100).toFixed(0)}%`;
+        }
+        benefit = tier.benefit || REWARD_TIERS.find(t => t.grade === grade && t.benefit)?.benefit || '';
+      } else if (m.avg >= 135000) {
+        grade = '티라미슈'; reward = '숫돌 24개'; benefit = '전체면제 + 숫돌24개';
+      } else if (m.avg >= 90000) {
+        grade = '크로칸슈'; reward = '-'; benefit = '전체면제';
+      } else if (m.avg >= 55000) {
+        grade = '롤케이크'; reward = '-'; benefit = '절반면제';
+      } else {
+        grade = '팬케이크'; reward = '-'; benefit = bottom5.includes(m.name) ? '부캐면제 X' : '';
+      }
+      return { ...m, rank, grade, reward, benefit };
+    });
+
+    const gc = (grade) => gradeColors[grade] || gradeColors['팬케이크'];
+
+    let html = '';
+
+    // 보상 체계 요약
+    html += `<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 lg:p-5 mb-3">
+      <h4 class="text-xs font-bold text-gray-700 mb-3"><i class="fas fa-info-circle mr-1 text-blue-400"></i>보상 체계 요약</h4>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        ${['크라운','파르페','티라미슈','크로칸슈','롤케이크','팬케이크'].map(g => {
+          const c = gc(g); const cnt = results.filter(r => r.grade === g).length;
+          const info = g === '크라운' ? 'TOP 3' : g === '파르페' ? '4~13등' : g === '티라미슈' ? '135,000+' : g === '크로칸슈' ? '90,000+' : g === '롤케이크' ? '55,000+' : '하위';
+          return `<div class="${c.bg} ${c.border} border rounded-xl p-2 text-center">
+            <div class="text-[10px] font-black ${c.text}">${g}</div>
+            <div class="text-lg font-black ${c.text}">${cnt}</div>
+            <div class="text-[8px] text-gray-400">${info}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+    // 순위 테이블
+    html += `<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="overflow-auto" style="max-height:65vh">
+      <table class="w-full text-left text-[10px] lg:text-xs whitespace-nowrap stick-head">
+        <thead class="bg-gray-50 text-[9px] lg:text-[10px] font-bold text-gray-500 border-b border-gray-100">
+          <tr><th class="py-2 px-2 text-center w-10">#</th><th class="py-2 px-2">등급</th><th class="py-2 px-2">닉네임</th><th class="py-2 px-2 text-right">분기평균</th><th class="py-2 px-2 text-right hidden sm:table-cell">참여</th><th class="py-2 px-2 text-right">보상</th><th class="py-2 px-2 hidden lg:table-cell">혜택</th></tr>
+        </thead><tbody class="divide-y divide-gray-50 text-gray-600 font-bold">`;
+
+    let prevGrade = '';
+    results.forEach(r => {
+      const c = gc(r.grade);
+      const isNew = r.grade !== prevGrade;
+      prevGrade = r.grade;
+      const medal = r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank;
+      html += `<tr class="hover:bg-gray-50/50 ${isNew ? 'border-t-2 border-gray-200' : ''}">
+        <td class="py-2 px-2 text-center font-black">${medal}</td>
+        <td class="py-2 px-2"><span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold text-white ${c.badge}">${r.grade}</span></td>
+        <td class="py-2 px-2 font-bold text-gray-800">${r.name}</td>
+        <td class="py-2 px-2 text-right font-mono">${r.avg.toLocaleString()}</td>
+        <td class="py-2 px-2 text-right text-gray-400 hidden sm:table-cell">${r.participated}/${r.weeks}주</td>
+        <td class="py-2 px-2 text-right font-bold ${r.reward !== '-' ? 'text-amber-600' : 'text-gray-400'}">${r.reward}</td>
+        <td class="py-2 px-2 text-[9px] text-gray-400 hidden lg:table-cell">${r.benefit}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+
+    // 유의사항
+    html += `<div class="bg-gray-50 rounded-2xl border border-gray-100 p-4 mt-3">
+      <p class="text-[10px] text-gray-500 font-bold space-y-1">
+        <span class="block">⚠ 점수 기준은 분기 평균 점수로 산정합니다.</span>
+        <span class="block">⚠ 신규 가입자는 전체 주차 기준 평균 (미참여 주차 = 0점 처리)</span>
+        <span class="block">⚠ 수로 미참여 시 해당 주차 0점 반영 → 등급 하락 가능</span>
+      </p>
+    </div>`;
+
+    wrap.innerHTML = html;
+  };
+
   window.renderBoard = async (container) => {
     const bs = window._boardState;
     container.innerHTML = `
@@ -5464,6 +5650,18 @@
 
    <div class="${sTab !== 'admin' ? 'hidden' : ''}">
 
+   <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 font-bold mb-4">
+   <div class="flex items-center gap-3 mb-4">
+   <div class="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center"><i class="fas fa-gift text-amber-500"></i></div>
+   <div><h3 class="text-lg text-gray-800">수로 보상 설정</h3><p class="text-[10px] text-gray-400">조각 시세를 설정하면 크라운/파르페 보상이 자동 계산됩니다</p></div>
+   </div>
+   <div class="flex items-center gap-3 flex-wrap">
+     <label class="text-xs text-gray-600">조각 1개 시세 (만원)</label>
+     <input type="number" id="cfgPiecePrice" value="${SITE_CONFIG?.suroReward?.piecePrice || 0}" class="w-32 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-100" placeholder="예: 650">
+     <button onclick="window._savePiecePrice()" class="px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold shadow hover:bg-amber-600 transition-all"><i class="fas fa-save mr-1"></i>저장</button>
+   </div>
+   </div>
+
    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 font-bold">
    <div class="flex items-center gap-3 mb-2">
    <div class="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center"><i class="fas fa-user-shield text-blue-500"></i></div>
@@ -5884,6 +6082,20 @@
    } catch(e) {
    window.showMsg('백업 실패: ' + (e.message || e), 'error');
    }
+  };
+
+  window._savePiecePrice = async () => {
+    const price = parseInt(document.getElementById('cfgPiecePrice')?.value) || 0;
+    try {
+      const { data: cfgRow } = await supaDb.from('site_config').select('config').eq('id', 1).maybeSingle();
+      const cfg = cfgRow?.config || {};
+      if (!cfg.suroReward) cfg.suroReward = {};
+      cfg.suroReward.piecePrice = price;
+      const { error } = await supaDb.from('site_config').update({ config: cfg }).eq('id', 1);
+      if (error) throw error;
+      SITE_CONFIG.suroReward = cfg.suroReward;
+      window.showMsg('조각 시세가 저장되었습니다: ' + price.toLocaleString() + '만원', 'success');
+    } catch(e) { window.showMsg('저장 실패: ' + e.message, 'error'); }
   };
 
   window._loadAdminList = async () => {
