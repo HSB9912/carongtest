@@ -4016,7 +4016,7 @@
 
   window.renderSuroReward = (container) => {
     const headers = appState.suroHeaders || [];
-    const members = appState.members.filter(m => m.guild === '뚠카롱' && m.isMain);
+    const members = appState.members.filter(m => m.guild === '뚠카롱');
     const rewardCfg = SITE_CONFIG?.suroReward || {};
     const piecePrice = rewardCfg.piecePrice || 0;
 
@@ -4083,7 +4083,7 @@
       const participated = activeScores.filter(s => s > 0).length;
       const avg = activeWeeks > 0 ? Math.round(total / activeWeeks) : 0;
       const isNewbie = startIdx > 0 && startIdx < scores.length;
-      return { name: m.name, avg, total, weeks: scores.length, activeWeeks, participated, role: m.role, isNewbie };
+      return { name: m.name, avg, total, weeks: scores.length, activeWeeks, participated, role: m.role, isNewbie, isMain: m.isMain, mainCharName: m.mainCharName || '' };
     }).sort((a,b) => b.avg - a.avg);
 
     // 등급 배정
@@ -4171,7 +4171,7 @@
       html += `<tr class="hover:bg-gray-50/50 ${isNew ? 'border-t-2 border-gray-200' : ''}">
         <td class="py-2 px-2 text-center font-black">${medal}</td>
         <td class="py-2 px-2"><span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold text-white ${c.badge}">${r.grade}</span></td>
-        <td class="py-2 px-2 font-bold text-gray-800">${r.name}</td>
+        <td class="py-2 px-2 font-bold text-gray-800">${r.name}${!r.isMain ? '<span class="text-[8px] text-gray-400 ml-1">(부캐: ' + (r.mainCharName || '?') + ')</span>' : ''}</td>
         <td class="py-2 px-2 text-right font-mono">${r.avg.toLocaleString()}</td>
         <td class="py-2 px-2 text-right text-gray-400 hidden sm:table-cell">${r.participated}/${r.activeWeeks}주${r.isNewbie ? ' <span class="text-[8px] text-blue-500 bg-blue-50 px-1 rounded">신규</span>' : ''}</td>
         <td class="py-2 px-2 text-right font-bold ${r.reward !== '-' ? 'text-amber-600' : 'text-gray-400'}">${r.reward}${r.rewardNote ? '<br><span class="text-[8px] text-gray-400 font-normal">' + r.rewardNote + '</span>' : ''}</td>
