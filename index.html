@@ -7275,8 +7275,12 @@
   window._guessMainChar = async (characterName) => {
     try {
       const ocid = await window._getCharOcid(characterName);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dateStr = yesterday.toISOString().split('T')[0];
       const rankData = await window._nexonFetch('/maplestory/v1/ranking/union', {
-        ocid: ocid
+        ocid: ocid,
+        date: dateStr
       });
       if (rankData && rankData.ranking && rankData.ranking.length > 0) {
         return rankData.ranking[0].character_name;
