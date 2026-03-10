@@ -7272,6 +7272,32 @@
    }
   };
 
+  window._guessMainChar = async (characterName) => {
+    try {
+      const ocid = await window._getCharOcid(characterName);
+      const unionData = await window._nexonFetch('/maplestory/v1/user/union', { ocid });
+      if (unionData && unionData.union_level) {
+        const rankData = await window._nexonFetch('/maplestory/v1/ranking/union', {
+          world_name: window._getSyncWorld(),
+          ocid: ocid
+        });
+        if (rankData && rankData.ranking && rankData.ranking.length > 0) {
+          return rankData.ranking[0].character_name;
+        }
+      }
+      const rankData2 = await window._nexonFetch('/maplestory/v1/ranking/overall', {
+        world_name: window._getSyncWorld(),
+        ocid: ocid
+      });
+      if (rankData2 && rankData2.ranking && rankData2.ranking.length > 0) {
+        return rankData2.ranking[0].character_name;
+      }
+      return null;
+    } catch(e) {
+      return null;
+    }
+  };
+
   window._runSync = async () => {
    const apiKey = window._getNexonApiKey();
    if (!apiKey) { window.showMsg('Nexon API Key를 먼저 입력해주세요.', 'error'); return; }
@@ -7477,6 +7503,9 @@
    <button onclick="window._syncFetchAllCharInfo()" id="syncFetchInfoBtn" class="px-4 py-2 bg-indigo-500 text-white rounded-xl font-bold text-[10px] shadow-sm hover:bg-indigo-600 transition-all">
    <i class="fas fa-download mr-1"></i>API에서 직업/레벨 일괄 조회
    </button>
+   <button onclick="window._syncGuessAllMains()" id="syncGuessAllBtn" class="px-4 py-2 bg-purple-500 text-white rounded-xl font-bold text-[10px] shadow-sm hover:bg-purple-600 transition-all">
+   <i class="fas fa-magic mr-1"></i>본캐 자동 추론
+   </button>
    <span id="syncFetchProgress" class="text-[10px] text-gray-400 ml-2"></span>
    </div>
    <div class="overflow-x-auto">
@@ -7523,7 +7552,10 @@
    <input type="checkbox" class="sync-new-isMain w-4 h-4 text-pink-500 rounded cursor-pointer" checked onchange="window._syncNewMainToggle(${i}, this.checked)">
    </td>
    <td class="p-1">
-   <input type="text" class="sync-new-mainChar w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none hidden" id="syncNewMainChar_${i}" placeholder="본캐닉">
+   <div class="flex gap-1 items-center hidden" id="syncNewMainCharWrap_${i}">
+   <input type="text" class="sync-new-mainChar flex-1 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none" id="syncNewMainChar_${i}" placeholder="본캐닉">
+   <button onclick="window._syncGuessMain(${i},'${m.name.replace(/'/g,"\\'")}')" class="shrink-0 w-7 h-7 bg-blue-500 text-white rounded-lg text-[9px] hover:bg-blue-600" title="API로 본캐 추론"><i class="fas fa-magic"></i></button>
+   </div>
    </td>
    </tr>`;
    }).join('')}
@@ -7645,8 +7677,48 @@
    if (roleEl) roleEl.innerHTML = roles.map(r => `<option value="${r}" ${r === defaultRole ? 'selected' : ''}>${r}</option>`).join('');
   };
   window._syncNewMainToggle = (idx, isMain) => {
-   const el = document.getElementById(`syncNewMainChar_${idx}`);
+   const el = document.getElementById(`syncNewMainCharWrap_${idx}`);
    if (el) { isMain ? el.classList.add('hidden') : el.classList.remove('hidden'); }
+  };
+
+  window._syncGuessMain = async (idx, charName) => {
+    const input = document.getElementById(`syncNewMainChar_${idx}`);
+    const btn = input?.nextElementSibling;
+    if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+      const result = await window._guessMainChar(charName);
+      if (result && result !== charName) {
+        if (input) input.value = result;
+        if (btn) btn.innerHTML = '<i class="fas fa-check text-green-200"></i>';
+      } else {
+        if (btn) { btn.innerHTML = '<i class="fas fa-question"></i>'; btn.title = '추론 실패 — 직접 입력하세요'; }
+      }
+    } catch(e) {
+      if (btn) btn.innerHTML = '<i class="fas fa-times text-red-200"></i>';
+    }
+  };
+
+  window._syncGuessAllMains = async () => {
+    const apiKey = window._getNexonApiKey();
+    if (!apiKey) { window.showMsg('Nexon API Key를 먼저 입력해주세요.', 'error'); return; }
+    const btn = document.getElementById('syncGuessAllBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>추론 중...'; }
+    const checkboxes = document.querySelectorAll('.sync-new-isMain');
+    let count = 0, total = 0;
+    for (let i = 0; i < checkboxes.length; i++) {
+      if (!checkboxes[i].checked) {
+        total++;
+        const nameEl = document.getElementById(`syncNewRow_${i}`)?.querySelector('.text-green-700');
+        const charName = nameEl?.textContent?.trim();
+        if (charName) {
+          count++;
+          if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>' + count + '/' + total;
+          await window._syncGuessMain(i, charName);
+        }
+      }
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic mr-1"></i>본캐 자동 추론 (' + count + '명)'; }
+    if (count === 0) window.showMsg('부캐(본캐 체크 해제)가 없습니다.', 'info');
   };
 
   window._applyNickChanges = async () => {
