@@ -79,15 +79,23 @@
    <button onclick="router('sub_chars')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sub_chars"><i class="fas fa-sitemap w-5 text-center text-xs"></i><span>부캐 현황</span></button>
    <button onclick="router('bail')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="bail"><i class="fas fa-gem w-5 text-center text-xs"></i><span>보석금</span></button>
    <button onclick="router('penalty')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="penalty"><i class="fas fa-exclamation-triangle w-5 text-center text-xs"></i><span>벌점</span></button>
-   <p class="admin-only hidden px-4 pt-4 pb-2 text-[9px] font-bold text-gray-300 uppercase tracking-widest">관리자</p>
-   <button onclick="router('suro_input')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="suro_input"><i class="fas fa-keyboard w-5 text-center text-xs"></i><span>수로 입력</span></button>
-   <button onclick="router('role_assign')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="role_assign"><i class="fas fa-medal w-5 text-center text-xs"></i><span>직위 반영</span></button>
-   <button onclick="router('guide_edit')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="guide_edit"><i class="fas fa-edit w-5 text-center text-xs"></i><span>가이드 편집</span></button>
-   <button onclick="router('sync')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sync"><i class="fas fa-sync w-5 text-center text-xs"></i><span>동기화</span></button>
-   <button onclick="router('sheet')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sheet"><i class="fas fa-database w-5 text-center text-xs"></i><span>DB 시트</span></button>
-   <button onclick="router('history')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="history"><i class="fas fa-history w-5 text-center text-xs"></i><span>운영 이력</span></button>
-   <button onclick="router('records')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="records"><i class="fas fa-book w-5 text-center text-xs"></i><span>영구 기록</span></button>
-   <button onclick="router('settings')" class="admin-only hidden nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="settings"><i class="fas fa-cog w-5 text-center text-xs"></i><span>설정</span></button>
+   <div class="admin-only hidden" id="adminMenuSection">
+   <button onclick="const el=document.getElementById('adminMenuList');el.classList.toggle('hidden');this.querySelector('.fa-chevron-down')?.classList.toggle('rotate-180')" class="w-full flex items-center justify-between px-4 pt-4 pb-2 cursor-pointer hover:bg-pink-50/50 rounded-xl transition-all">
+     <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">관리자</span>
+     <i class="fas fa-chevron-down text-[8px] text-gray-300 transition-transform"></i>
+   </button>
+   <div id="adminMenuList" class="hidden">
+   <button onclick="router('weekly_log')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="weekly_log"><i class="fas fa-calendar-week w-5 text-center text-xs"></i><span>주간 이력</span></button>
+   <button onclick="router('suro_input')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="suro_input"><i class="fas fa-keyboard w-5 text-center text-xs"></i><span>수로 입력</span></button>
+   <button onclick="router('role_assign')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="role_assign"><i class="fas fa-medal w-5 text-center text-xs"></i><span>직위 반영</span></button>
+   <button onclick="router('guide_edit')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="guide_edit"><i class="fas fa-edit w-5 text-center text-xs"></i><span>가이드 편집</span></button>
+   <button onclick="router('sync')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sync"><i class="fas fa-sync w-5 text-center text-xs"></i><span>동기화</span></button>
+   <button onclick="router('sheet')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sheet"><i class="fas fa-database w-5 text-center text-xs"></i><span>DB 시트</span></button>
+   <button onclick="router('history')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="history"><i class="fas fa-history w-5 text-center text-xs"></i><span>운영 이력</span></button>
+   <button onclick="router('records')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="records"><i class="fas fa-book w-5 text-center text-xs"></i><span>영구 기록</span></button>
+   <button onclick="router('settings')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="settings"><i class="fas fa-cog w-5 text-center text-xs"></i><span>설정</span></button>
+   </div>
+   </div>
   </nav>
   <div class="p-3 border-t border-gray-100 bg-gray-50/50 font-bold space-y-2">
    <div class="flex items-center justify-center gap-1">
@@ -1208,7 +1216,7 @@
             const content = document.getElementById('contentArea'); if(!content) return;
             content.innerHTML = '';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.target === tab));
-            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', suro_reward: '수로 보상', board: '게시판', sub_chars: '부캐 현황', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
+            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', suro_reward: '수로 보상', board: '게시판', sub_chars: '부캐 현황', weekly_log: '주간 이력', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
             document.getElementById('pageTitle').innerText = titles[tab] || '';
             if (tab === 'home') window.renderHome(content);
             else if (tab === 'members') window.renderMembers(content);
@@ -1217,6 +1225,7 @@
             else if (tab === 'suro_reward') window.renderSuroReward(content);
             else if (tab === 'board') window.renderBoard(content);
             else if (tab === 'sub_chars') window.renderSubChars(content);
+            else if (tab === 'weekly_log' && isAdmin()) window.renderWeeklyLog(content);
             else if (tab === 'suro_input' && isAdmin()) window.renderSuroInput(content);
             else if (tab === 'bail') window.renderBail(content);
             else if (tab === 'penalty') window.renderPenalty(content);
@@ -1230,6 +1239,10 @@
             const _sb = document.getElementById('sidebar'), _ov = document.getElementById('sidebarOverlay');
             if (window.innerWidth < 1024 && _sb) { _sb.classList.add('-translate-x-full'); _ov?.classList.add('hidden'); }
             if (window._updateMobileTab) window._updateMobileTab(tab);
+            // 관리자 메뉴 선택 시 자동 펼침
+            const adminTabs = ['weekly_log','suro_input','role_assign','guide_edit','sync','sheet','history','records','settings'];
+            const adminList = document.getElementById('adminMenuList');
+            if (adminList && adminTabs.includes(tab)) adminList.classList.remove('hidden');
         };
 
         window.renderDashboard = (container) => {
@@ -4679,6 +4692,118 @@
       document.body.removeChild(ta);
       window.showMsg('복사 완료!', 'success');
     });
+  };
+
+  // ============ 주간 이력 ============
+  window._weeklyLogState = { weekOffset: 0 };
+
+  window._getMapleWeek = (offset) => {
+    const now = new Date();
+    now.setDate(now.getDate() - (offset || 0) * 7);
+    const day = now.getDay();
+    // 목(4)이 시작, 수(3)이 끝
+    let daysSinceThurs = day - 4;
+    if (daysSinceThurs < 0) daysSinceThurs += 7;
+    const start = new Date(now);
+    start.setDate(now.getDate() - daysSinceThurs);
+    start.setHours(0,0,0,0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23,59,59,999);
+    return { start, end };
+  };
+
+  window._fmtDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  window._dayNames = ['일','월','화','수','목','금','토'];
+
+  window.renderWeeklyLog = (container) => {
+    const ws = window._weeklyLogState;
+    const week = window._getMapleWeek(ws.weekOffset);
+    const startStr = window._fmtDate(week.start);
+    const endStr = window._fmtDate(week.end);
+    const startDay = window._dayNames[week.start.getDay()];
+    const endDay = window._dayNames[week.end.getDay()];
+
+    // 이력 필터 (해당 주차)
+    const history = (appState.history || []).filter(h => {
+      const d = new Date(h.date);
+      return d >= week.start && d <= week.end;
+    });
+
+    // 카테고리별 분류
+    const catGroups = {
+      join: { label: '가입', icon: 'fa-user-plus', color: 'emerald', items: [] },
+      leave: { label: '탈퇴/추방', icon: 'fa-user-minus', color: 'red', items: [] },
+      move: { label: '길드 이동', icon: 'fa-exchange-alt', color: 'blue', items: [] },
+      nick: { label: '닉네임 변경', icon: 'fa-id-badge', color: 'purple', items: [] },
+      edit: { label: '정보 수정', icon: 'fa-edit', color: 'amber', items: [] },
+      other: { label: '기타', icon: 'fa-ellipsis-h', color: 'gray', items: [] },
+    };
+
+    history.forEach(h => {
+      const cat = h.category || '';
+      if (cat.includes('추가') || cat.includes('가입')) catGroups.join.items.push(h);
+      else if (cat.includes('삭제') || cat.includes('탈퇴') || cat.includes('추방')) catGroups.leave.items.push(h);
+      else if (cat.includes('이동')) catGroups.move.items.push(h);
+      else if (cat.includes('닉변')) catGroups.nick.items.push(h);
+      else if (cat.includes('수정') || cat.includes('일괄수정')) catGroups.edit.items.push(h);
+      else if (cat !== '설정' && cat !== '직위반영') catGroups.other.items.push(h);
+    });
+
+    const activeGroups = Object.values(catGroups).filter(g => g.items.length > 0);
+    const totalEvents = activeGroups.reduce((a, g) => a + g.items.length, 0);
+
+    container.innerHTML = `
+    <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
+      <!-- 주차 네비게이션 -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 lg:p-4 flex items-center gap-3">
+        <button onclick="window._weeklyLogState.weekOffset++;window.renderWeeklyLog(document.getElementById('contentArea'))" class="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-pink-100 text-gray-500 transition-all"><i class="fas fa-chevron-left text-[10px]"></i></button>
+        <div class="flex-1 text-center">
+          <div class="text-sm font-black text-gray-800">${startStr}(${startDay}) ~ ${endStr}(${endDay})</div>
+          <div class="text-[10px] text-gray-400 font-bold">${ws.weekOffset === 0 ? '이번 주' : ws.weekOffset === 1 ? '지난 주' : ws.weekOffset + '주 전'}</div>
+        </div>
+        <button onclick="if(window._weeklyLogState.weekOffset>0){window._weeklyLogState.weekOffset--;window.renderWeeklyLog(document.getElementById('contentArea'))}" class="w-8 h-8 flex items-center justify-center rounded-xl ${ws.weekOffset > 0 ? 'bg-gray-100 hover:bg-pink-100 text-gray-500' : 'bg-gray-50 text-gray-300 cursor-not-allowed'} transition-all"><i class="fas fa-chevron-right text-[10px]"></i></button>
+        ${ws.weekOffset > 0 ? `<button onclick="window._weeklyLogState.weekOffset=0;window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-3 py-1.5 bg-pink-500 text-white rounded-xl text-[9px] font-bold shadow hover:bg-pink-600">오늘</button>` : ''}
+      </div>
+
+      <!-- 요약 카드 -->
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        ${Object.entries(catGroups).map(([k, g]) => `
+          <div class="bg-white rounded-xl border border-gray-100 p-2 text-center">
+            <div class="text-lg font-black ${g.items.length > 0 ? 'text-'+g.color+'-500' : 'text-gray-200'}">${g.items.length}</div>
+            <div class="text-[8px] font-bold text-gray-400"><i class="fas ${g.icon} mr-0.5"></i>${g.label}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      ${totalEvents === 0 ? `
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+        <i class="fas fa-check-circle text-3xl text-emerald-300 mb-3"></i>
+        <p class="text-sm font-bold text-gray-400">이번 주차에 변동사항이 없습니다</p>
+      </div>` : `
+      <!-- 이력 목록 -->
+      ${activeGroups.map(g => `
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+          <i class="fas ${g.icon} text-${g.color}-400 text-xs"></i>
+          <span class="text-xs font-bold text-gray-700">${g.label}</span>
+          <span class="text-[9px] font-bold text-${g.color}-500 bg-${g.color}-50 px-2 py-0.5 rounded-full">${g.items.length}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+          ${g.items.sort((a,b) => new Date(b.date) - new Date(a.date)).map(h => {
+            const d = new Date(h.date);
+            const ds = `${d.getMonth()+1}/${d.getDate()}(${window._dayNames[d.getDay()]})`;
+            return `<div class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50/50">
+              <span class="text-[10px] text-gray-400 font-bold w-16 shrink-0">${ds}</span>
+              <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">${h.category}</span>
+              <span class="text-xs font-bold text-gray-800">${h.name}</span>
+              <span class="text-[10px] text-gray-400 truncate">${h.content || ''}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
+      `}
+    </div>`;
   };
 
   window.renderGuildStats = (container) => {
