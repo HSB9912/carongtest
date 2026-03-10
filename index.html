@@ -4801,6 +4801,7 @@
         <button onclick="window._weeklyLogState.guild='';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-0.5 rounded text-[8px] font-bold ${!ws.guild ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'}">전체</button>
         ${guildList.map(g => `<button onclick="window._weeklyLogState.guild='${g}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-0.5 rounded text-[8px] font-bold ${ws.guild===g ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'}">${g.replace('카롱','')}</button>`).join('')}
         <span class="text-[8px] text-gray-400 ml-auto">${filtered.length}건</span>
+        ${catCounts.leave > 0 ? `<button onclick="window._weeklyTrackAll()" id="weeklyTrackAllBtn" class="px-2 py-0.5 rounded bg-blue-500 text-white text-[8px] font-bold hover:bg-blue-600"><i class="fas fa-search mr-0.5"></i>탈퇴자 행선지</button>` : ''}
       </div>
 
       <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-0">
@@ -4814,6 +4815,7 @@
               <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:32px">길드</th>
               <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:70px">닉네임</th>
               <th class="py-1 px-1.5 text-left">상세</th>
+              <th class="py-1 px-1.5 text-center" style="width:60px">행선지</th>
             </tr>
           </thead>
           <tbody class="font-bold text-gray-600">
@@ -4822,7 +4824,7 @@
               const ds = (d.getMonth()+1)+'/'+d.getDate()+'('+window._dayNames[d.getDay()]+')';
               const cc = catColors[h._type] || '#9ca3af';
               const gl = h._guild ? h._guild.replace('카롱','') : '';
-              return '<tr class="border-b border-gray-50 hover:bg-gray-50/50" style="border-left:3px solid '+cc+'"><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+ds+'</td><td class="py-0.5 px-1.5 border-r border-gray-50"><span class="text-[8px] font-bold" style="color:'+cc+'">'+h.category.replace('동기화-','')+'</span></td><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+gl+'</td><td class="py-0.5 px-1.5 text-gray-800 border-r border-gray-50">'+h.name+'</td><td class="py-0.5 px-1.5 text-gray-400 text-[8px]">'+(h.content||'')+'</td></tr>';
+              return '<tr class="border-b border-gray-50 hover:bg-gray-50/50" style="border-left:3px solid '+cc+'" id="wl_'+h.id+'"><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+ds+'</td><td class="py-0.5 px-1.5 border-r border-gray-50"><span class="text-[8px] font-bold" style="color:'+cc+'">'+h.category.replace('동기화-','')+'</span></td><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+gl+'</td><td class="py-0.5 px-1.5 text-gray-800 border-r border-gray-50">'+h.name+'</td><td class="py-0.5 px-1.5 text-gray-400 text-[8px]">'+(h.content||'')+'</td><td class="py-0.5 px-1.5 text-center border-l border-gray-50" style="width:60px" id="wldest_'+h.id+'">'+(h._type==='leave'?'<button onclick="window._weeklyTrack(\''+h.name+'\','+h.id+')" class="text-[7px] text-blue-400 hover:text-blue-600 font-bold"><i class="fas fa-search"></i></button>':'')+'</td></tr>';
             }).join('')}
           </tbody>
         </table>
@@ -4831,7 +4833,61 @@
     </div>`;
   };
 
-    window.renderGuildStats = (container) => {
+    window._weeklyTrack = async (name, hid) => {
+    const el = document.getElementById('wldest_' + hid);
+    if (!el) return;
+    el.innerHTML = '<i class="fas fa-spinner fa-spin text-[8px] text-gray-400"></i>';
+    try {
+      const info = await window._getCharInfo(name);
+      if (info && info.guild) {
+        el.innerHTML = '<span class="text-[8px] font-bold text-blue-600">' + info.guild + '</span>';
+      } else if (info && !info.guild) {
+        el.innerHTML = '<span class="text-[8px] text-gray-400">무소속</span>';
+      } else {
+        el.innerHTML = '<span class="text-[8px] text-red-400">조회실패</span>';
+      }
+    } catch(e) {
+      el.innerHTML = '<span class="text-[8px] text-red-400">에러</span>';
+    }
+  };
+
+  window._weeklyTrackAll = async () => {
+    const apiKey = window._getNexonApiKey();
+    if (!apiKey) { window.showMsg('Nexon API Key를 먼저 입력해주세요. (동기화 탭)', 'error'); return; }
+    const btn = document.getElementById('weeklyTrackAllBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-0.5"></i>조회 중...'; }
+
+    const rows = document.querySelectorAll('[id^="wldest_"]');
+    let count = 0;
+    for (const el of rows) {
+      const hid = el.id.replace('wldest_', '');
+      const tr = document.getElementById('wl_' + hid);
+      if (!tr) continue;
+      const nameCell = tr.querySelectorAll('td')[3];
+      if (!nameCell) continue;
+      const btn2 = el.querySelector('button');
+      if (!btn2) continue;
+      const name = nameCell.textContent.trim();
+      el.innerHTML = '<i class="fas fa-spinner fa-spin text-[8px] text-gray-400"></i>';
+      try {
+        const info = await window._getCharInfo(name);
+        if (info && info.guild) {
+          el.innerHTML = '<span class="text-[8px] font-bold text-blue-600">' + info.guild + '</span>';
+        } else if (info && !info.guild) {
+          el.innerHTML = '<span class="text-[8px] text-gray-400">무소속</span>';
+        } else {
+          el.innerHTML = '<span class="text-[8px] text-red-400">미발견</span>';
+        }
+      } catch(e) {
+        el.innerHTML = '<span class="text-[8px] text-red-400">에러</span>';
+      }
+      count++;
+      if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-0.5"></i>' + count + '/' + rows.length;
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check mr-0.5"></i>완료!'; }
+  };
+
+  window.renderGuildStats = (container) => {
     const members = appState.members;
     const guilds = appState.guilds;
     const headers = appState.suroHeaders || [];
