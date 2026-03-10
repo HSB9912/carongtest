@@ -76,6 +76,7 @@
    <button onclick="router('guild_stats')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="guild_stats"><i class="fas fa-chart-pie w-5 text-center text-xs"></i><span>길드 현황</span></button>
    <button onclick="router('suro_reward')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="suro_reward"><i class="fas fa-gift w-5 text-center text-xs"></i><span>수로 보상</span></button>
    <button onclick="router('board')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="board"><i class="fas fa-clipboard w-5 text-center text-xs"></i><span>게시판</span></button>
+   <button onclick="router('sub_chars')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="sub_chars"><i class="fas fa-sitemap w-5 text-center text-xs"></i><span>부캐 현황</span></button>
    <button onclick="router('bail')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="bail"><i class="fas fa-gem w-5 text-center text-xs"></i><span>보석금</span></button>
    <button onclick="router('penalty')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="penalty"><i class="fas fa-exclamation-triangle w-5 text-center text-xs"></i><span>벌점</span></button>
    <p class="admin-only hidden px-4 pt-4 pb-2 text-[9px] font-bold text-gray-300 uppercase tracking-widest">관리자</p>
@@ -1207,7 +1208,7 @@
             const content = document.getElementById('contentArea'); if(!content) return;
             content.innerHTML = '';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.target === tab));
-            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', suro_reward: '수로 보상', board: '게시판', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
+            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '길드 현황', suro_reward: '수로 보상', board: '게시판', sub_chars: '부캐 현황', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
             document.getElementById('pageTitle').innerText = titles[tab] || '';
             if (tab === 'home') window.renderHome(content);
             else if (tab === 'members') window.renderMembers(content);
@@ -1215,6 +1216,7 @@
             else if (tab === 'guild_stats') window.renderGuildStats(content);
             else if (tab === 'suro_reward') window.renderSuroReward(content);
             else if (tab === 'board') window.renderBoard(content);
+            else if (tab === 'sub_chars') window.renderSubChars(content);
             else if (tab === 'suro_input' && isAdmin()) window.renderSuroInput(content);
             else if (tab === 'bail') window.renderBail(content);
             else if (tab === 'penalty') window.renderPenalty(content);
@@ -4530,6 +4532,153 @@
       window._boardState.tab = boardType;
       window._boardBack();
     } catch(e) { window.showMsg('저장 실패: ' + e.message, 'error'); }
+  };
+
+  // ============ 부캐 현황 ============
+  window._subCharsState = { guild: '', search: '', sortField: 'role', sortOrder: 'asc' };
+
+  window.renderSubChars = (container) => {
+    const members = appState.members;
+    const guilds = appState.guilds;
+    const subGuilds = guilds.filter(g => !['뚠카롱','뚱카롱'].includes(g.name));
+    const ss = window._subCharsState;
+    if (!ss.guild) ss.guild = subGuilds[0]?.name || '';
+
+    // 본캐 맵: 본캐이름 → { main, subs[] }
+    const mainMap = {};
+    members.filter(m => m.isMain).forEach(m => { mainMap[m.name] = { main: m, subs: [] }; });
+    members.filter(m => !m.isMain && m.mainCharName).forEach(m => {
+      if (mainMap[m.mainCharName]) mainMap[m.mainCharName].subs.push(m);
+    });
+
+    // 선택 길드 멤버 → 본캐별 그룹
+    const selectedMembers = members.filter(m => m.guild === ss.guild);
+    const guildSummary = {};
+    subGuilds.forEach(g => { guildSummary[g.name] = members.filter(m => m.guild === g.name).length; });
+
+    const treeData = [];
+    const processedMains = new Set();
+    selectedMembers.forEach(m => {
+      const mainName = m.isMain ? m.name : (m.mainCharName || '');
+      if (!mainName || processedMains.has(mainName)) return;
+      processedMains.add(mainName);
+      const mainInfo = mainMap[mainName];
+      if (mainInfo) {
+        const subsInGuild = mainInfo.subs.filter(s => s.guild === ss.guild);
+        treeData.push({ main: mainInfo.main, subs: subsInGuild });
+      } else {
+        treeData.push({ main: { name: mainName, guild: '?', role: '', class: '' }, subs: [m] });
+      }
+    });
+
+    // 검색
+    const search = (ss.search || '').toLowerCase().trim();
+    const filtered = search ? treeData.filter(t =>
+      t.main.name.toLowerCase().includes(search) ||
+      t.subs.some(s => s.name.toLowerCase().includes(search))
+    ) : treeData;
+
+    // 정렬
+    const rp = ROLE_PRIORITY || {};
+    const sf = ss.sortField || 'role';
+    const so = ss.sortOrder || 'asc';
+    const dir = so === 'asc' ? 1 : -1;
+    filtered.sort((a, b) => {
+      if (sf === 'role') return ((rp[a.main.role]??99) - (rp[b.main.role]??99)) * dir || a.main.name.localeCompare(b.main.name);
+      if (sf === 'name') return a.main.name.localeCompare(b.main.name) * dir;
+      if (sf === 'subs') return (a.subs.length - b.subs.length) * dir;
+      return 0;
+    });
+    const sortIcon = (f) => sf === f ? (so === 'asc' ? ' <i class="fas fa-sort-up"></i>' : ' <i class="fas fa-sort-down"></i>') : ' <i class="fas fa-sort text-gray-300"></i>';
+
+    // 최대 부캐 수 (컬럼 수 결정)
+    const maxSubs = Math.max(1, ...filtered.map(t => t.subs.length));
+    const subCols = Math.min(maxSubs, 6);
+
+    const gInfo = guilds.find(g => g.name === ss.guild) || {};
+
+    container.innerHTML = `
+    <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        ${subGuilds.map(g => {
+          const cnt = guildSummary[g.name] || 0;
+          const isActive = g.name === ss.guild;
+          return `<div onclick="window._subCharsState.guild='${g.name}';window._subCharsState.search='';window.renderSubChars(document.getElementById('contentArea'))" class="cursor-pointer rounded-2xl border-2 p-3 text-center transition-all ${isActive ? 'border-pink-400 shadow-md bg-pink-50' : 'border-gray-100 bg-white hover:border-pink-200'}">
+            <div class="text-[10px] font-bold ${isActive ? 'text-pink-600' : 'text-gray-500'}">${g.name}</div>
+            <div class="text-xl font-black ${isActive ? 'text-pink-600' : 'text-gray-800'}">${cnt}<span class="text-[10px] font-bold text-gray-400">명</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="p-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+          <h3 class="text-xs font-bold text-gray-700"><i class="fas fa-sitemap mr-1" style="color:${gInfo.color||'#ec4899'}"></i>${ss.guild} 부캐 명단 (${filtered.length}명)</h3>
+          <input type="text" value="${ss.search||''}" placeholder="검색..." oninput="window._subCharsState.search=this.value;window.renderSubChars(document.getElementById('contentArea'))" class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-[10px] font-bold outline-none w-32">
+          <button onclick="window._subCharsCopy()" class="ml-auto px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow hover:bg-emerald-600 transition-all"><i class="fas fa-copy mr-1"></i>시트 복사</button>
+        </div>
+        <div class="overflow-auto" style="max-height:65vh">
+          <table class="w-full text-[10px] lg:text-xs whitespace-nowrap border-collapse" id="subCharsTable">
+            <thead class="bg-gray-50 text-[9px] font-bold text-gray-500 border-b border-gray-200 sticky top-0 z-10">
+              <tr>
+                <th class="py-2 px-2 border-r border-gray-200 text-left cursor-pointer hover:bg-pink-50 select-none" onclick="window._subCharsSort('role')">비고${sortIcon('role')}</th>
+                <th class="py-2 px-2 border-r border-gray-200 text-left cursor-pointer hover:bg-pink-50 select-none" onclick="window._subCharsSort('name')">본캐${sortIcon('name')}</th>
+                ${Array.from({length: subCols}, (_, i) => `<th class="py-2 px-2 border-r border-gray-200 text-left">부캐${i+1}</th>`).join('')}
+                <th class="py-2 px-2 text-center cursor-pointer hover:bg-pink-50 select-none" onclick="window._subCharsSort('subs')">부캐수${sortIcon('subs')}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 font-bold text-gray-700">
+              ${filtered.map(t => {
+                const rd = SITE_CONFIG?.roleDisplay?.[t.main.role] || {};
+                const bgStyle = rd.rowColor ? `background:${rd.rowColor}15` : '';
+                const badgeStyle = rd.bgColor ? `background:${rd.bgColor};color:${rd.textColor||'white'}` : 'background:#f3f4f6;color:#6b7280';
+                const cells = Array.from({length: subCols}, (_, i) => {
+                  const s = t.subs[i];
+                  if (!s) return `<td class="py-1.5 px-2 border-r border-gray-100"></td>`;
+                  const srd = SITE_CONFIG?.roleDisplay?.[s.role] || {};
+                  const sBg = srd.bgColor ? `background:${srd.bgColor};color:${srd.textColor||'white'};padding:1px 6px;border-radius:4px;font-weight:700;` : '';
+                  return `<td class="py-1.5 px-2 border-r border-gray-100">${sBg ? `<span style="${sBg}">${s.name}</span>` : s.name}</td>`;
+                }).join('');
+                return `<tr class="hover:bg-gray-50/50" style="${bgStyle}">
+                  <td class="py-1.5 px-2 border-r border-gray-200"><span class="inline-block px-1.5 py-0.5 rounded text-[8px] font-bold" style="${badgeStyle}">${t.main.role||'-'}</span></td>
+                  <td class="py-1.5 px-2 border-r border-gray-200 font-bold text-gray-800">${t.main.name}</td>
+                  ${cells}
+                  <td class="py-1.5 px-2 text-center text-gray-400">${t.subs.length}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  window._subCharsSort = (field) => {
+    const ss = window._subCharsState;
+    if (ss.sortField === field) { ss.sortOrder = ss.sortOrder === 'asc' ? 'desc' : 'asc'; }
+    else { ss.sortField = field; ss.sortOrder = 'asc'; }
+    window.renderSubChars(document.getElementById('contentArea'));
+  };
+
+  window._subCharsCopy = () => {
+    const table = document.getElementById('subCharsTable');
+    if (!table) return;
+    let tsv = '';
+    table.querySelectorAll('tr').forEach(tr => {
+      const cells = [];
+      tr.querySelectorAll('th, td').forEach(td => {
+        cells.push(td.innerText.trim());
+      });
+      tsv += cells.join('\t') + '\n';
+    });
+    navigator.clipboard.writeText(tsv).then(() => {
+      window.showMsg('시트에 붙여넣기 가능! (탭 구분 복사됨)', 'success');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = tsv; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      window.showMsg('복사 완료!', 'success');
+    });
   };
 
   window.renderGuildStats = (container) => {
