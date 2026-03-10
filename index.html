@@ -4695,13 +4695,12 @@
   };
 
   // ============ 주간 이력 ============
-  window._weeklyLogState = { weekOffset: 0 };
+  window._weeklyLogState = { weekOffset: 0, filter: 'all', guild: '' };
 
   window._getMapleWeek = (offset) => {
     const now = new Date();
     now.setDate(now.getDate() - (offset || 0) * 7);
     const day = now.getDay();
-    // 목(4)이 시작, 수(3)이 끝
     let daysSinceThurs = day - 4;
     if (daysSinceThurs < 0) daysSinceThurs += 7;
     const start = new Date(now);
@@ -4716,6 +4715,24 @@
   window._fmtDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   window._dayNames = ['일','월','화','수','목','금','토'];
 
+  window._classifyHistory = (h) => {
+    const cat = h.category || '';
+    if (cat.includes('추가') || cat.includes('가입')) return 'join';
+    if (cat.includes('삭제') || cat.includes('탈퇴') || cat.includes('추방')) return 'leave';
+    if (cat.includes('이동')) return 'move';
+    if (cat.includes('닉변')) return 'nick';
+    if (cat.includes('수정') || cat.includes('일괄수정')) return 'edit';
+    if (cat.includes('직위변경') || cat.includes('직위반영')) return 'role';
+    if (cat === '설정') return '_skip';
+    return 'other';
+  };
+
+  window._extractGuild = (h) => {
+    const c = h.content || '';
+    const m = c.match(/(뚠카롱|뚱카롱|밤카롱|별카롱|달카롱|꿀카롱)/);
+    return m ? m[1] : '';
+  };
+
   window.renderWeeklyLog = (container) => {
     const ws = window._weeklyLogState;
     const week = window._getMapleWeek(ws.weekOffset);
@@ -4724,38 +4741,48 @@
     const startDay = window._dayNames[week.start.getDay()];
     const endDay = window._dayNames[week.end.getDay()];
 
-    // 이력 필터 (해당 주차)
     const history = (appState.history || []).filter(h => {
       const d = new Date(h.date);
       return d >= week.start && d <= week.end;
     });
 
-    // 카테고리별 분류
-    const catGroups = {
-      join: { label: '가입', icon: 'fa-user-plus', color: 'emerald', items: [] },
-      leave: { label: '탈퇴/추방', icon: 'fa-user-minus', color: 'red', items: [] },
-      move: { label: '길드 이동', icon: 'fa-exchange-alt', color: 'blue', items: [] },
-      nick: { label: '닉네임 변경', icon: 'fa-id-badge', color: 'purple', items: [] },
-      edit: { label: '정보 수정', icon: 'fa-edit', color: 'amber', items: [] },
-      other: { label: '기타', icon: 'fa-ellipsis-h', color: 'gray', items: [] },
+    const catMeta = {
+      all: { label: '전체', icon: 'fa-list', color: 'pink' },
+      join: { label: '가입', icon: 'fa-user-plus', color: 'emerald' },
+      leave: { label: '탈퇴/추방', icon: 'fa-user-minus', color: 'red' },
+      move: { label: '길드 이동', icon: 'fa-exchange-alt', color: 'blue' },
+      nick: { label: '닉변', icon: 'fa-id-badge', color: 'purple' },
+      edit: { label: '정보 수정', icon: 'fa-edit', color: 'amber' },
+      role: { label: '직위 변경', icon: 'fa-medal', color: 'orange' },
+      other: { label: '기타', icon: 'fa-ellipsis-h', color: 'gray' },
     };
 
-    history.forEach(h => {
-      const cat = h.category || '';
-      if (cat.includes('추가') || cat.includes('가입')) catGroups.join.items.push(h);
-      else if (cat.includes('삭제') || cat.includes('탈퇴') || cat.includes('추방')) catGroups.leave.items.push(h);
-      else if (cat.includes('이동')) catGroups.move.items.push(h);
-      else if (cat.includes('닉변')) catGroups.nick.items.push(h);
-      else if (cat.includes('수정') || cat.includes('일괄수정')) catGroups.edit.items.push(h);
-      else if (cat !== '설정' && cat !== '직위반영') catGroups.other.items.push(h);
-    });
+    // 분류
+    const catCounts = {};
+    Object.keys(catMeta).forEach(k => catCounts[k] = 0);
+    const classified = history.map(h => {
+      const type = window._classifyHistory(h);
+      if (type === '_skip') return null;
+      catCounts[type] = (catCounts[type] || 0) + 1;
+      catCounts.all++;
+      return { ...h, _type: type, _guild: window._extractGuild(h) };
+    }).filter(Boolean);
 
-    const activeGroups = Object.values(catGroups).filter(g => g.items.length > 0);
-    const totalEvents = activeGroups.reduce((a, g) => a + g.items.length, 0);
+    // 길드 목록 추출
+    const guildSet = new Set();
+    classified.forEach(h => { if (h._guild) guildSet.add(h._guild); });
+    const guildList = [...guildSet].sort();
+
+    // 필터 적용
+    let filtered = classified;
+    if (ws.filter !== 'all') filtered = filtered.filter(h => h._type === ws.filter);
+    if (ws.guild) filtered = filtered.filter(h => h._guild === ws.guild);
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const activeFilter = ws.filter || 'all';
 
     container.innerHTML = `
     <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
-      <!-- 주차 네비게이션 -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 lg:p-4 flex items-center gap-3">
         <button onclick="window._weeklyLogState.weekOffset++;window.renderWeeklyLog(document.getElementById('contentArea'))" class="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-pink-100 text-gray-500 transition-all"><i class="fas fa-chevron-left text-[10px]"></i></button>
         <div class="flex-1 text-center">
@@ -4766,43 +4793,49 @@
         ${ws.weekOffset > 0 ? `<button onclick="window._weeklyLogState.weekOffset=0;window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-3 py-1.5 bg-pink-500 text-white rounded-xl text-[9px] font-bold shadow hover:bg-pink-600">오늘</button>` : ''}
       </div>
 
-      <!-- 요약 카드 -->
-      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        ${Object.entries(catGroups).map(([k, g]) => `
-          <div class="bg-white rounded-xl border border-gray-100 p-2 text-center">
-            <div class="text-lg font-black ${g.items.length > 0 ? 'text-'+g.color+'-500' : 'text-gray-200'}">${g.items.length}</div>
-            <div class="text-[8px] font-bold text-gray-400"><i class="fas ${g.icon} mr-0.5"></i>${g.label}</div>
-          </div>
-        `).join('')}
+      <!-- 카테고리 필터 카드 -->
+      <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+        ${Object.entries(catMeta).map(([k, m]) => {
+          const cnt = catCounts[k] || 0;
+          const isActive = activeFilter === k;
+          return `<button onclick="window._weeklyLogState.filter='${k}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="rounded-xl border-2 p-2 text-center transition-all ${isActive ? 'border-'+m.color+'-400 bg-'+m.color+'-50 shadow' : 'border-gray-100 bg-white hover:border-gray-200'}">
+            <div class="text-lg font-black ${cnt > 0 ? (isActive ? 'text-'+m.color+'-600' : 'text-'+m.color+'-500') : 'text-gray-200'}">${cnt}</div>
+            <div class="text-[7px] font-bold ${isActive ? 'text-'+m.color+'-600' : 'text-gray-400'}"><i class="fas ${m.icon} mr-0.5"></i>${m.label}</div>
+          </button>`;
+        }).join('')}
       </div>
 
-      ${totalEvents === 0 ? `
+      <!-- 길드 필터 -->
+      ${guildList.length > 0 ? `<div class="flex items-center gap-1.5 flex-wrap">
+        <button onclick="window._weeklyLogState.guild='';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${!ws.guild ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">전체</button>
+        ${guildList.map(g => `<button onclick="window._weeklyLogState.guild='${g}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${ws.guild===g ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">${g.replace('카롱','')}</button>`).join('')}
+        <span class="text-[9px] text-gray-400 font-bold ml-auto">${filtered.length}건</span>
+      </div>` : ''}
+
+      <!-- 이력 목록 -->
+      ${filtered.length === 0 ? `
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
         <i class="fas fa-check-circle text-3xl text-emerald-300 mb-3"></i>
-        <p class="text-sm font-bold text-gray-400">이번 주차에 변동사항이 없습니다</p>
+        <p class="text-sm font-bold text-gray-400">${activeFilter === 'all' ? '이번 주차에 변동사항이 없습니다' : catMeta[activeFilter]?.label + ' 이력이 없습니다'}</p>
       </div>` : `
-      <!-- 이력 목록 -->
-      ${activeGroups.map(g => `
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
-          <i class="fas ${g.icon} text-${g.color}-400 text-xs"></i>
-          <span class="text-xs font-bold text-gray-700">${g.label}</span>
-          <span class="text-[9px] font-bold text-${g.color}-500 bg-${g.color}-50 px-2 py-0.5 rounded-full">${g.items.length}건</span>
-        </div>
-        <div class="divide-y divide-gray-50">
-          ${g.items.sort((a,b) => new Date(b.date) - new Date(a.date)).map(h => {
+        <div class="divide-y divide-gray-50" style="max-height:55vh;overflow-y:auto">
+          ${filtered.map(h => {
             const d = new Date(h.date);
             const ds = `${d.getMonth()+1}/${d.getDate()}(${window._dayNames[d.getDay()]})`;
-            return `<div class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50/50">
-              <span class="text-[10px] text-gray-400 font-bold w-16 shrink-0">${ds}</span>
-              <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">${h.category}</span>
-              <span class="text-xs font-bold text-gray-800">${h.name}</span>
-              <span class="text-[10px] text-gray-400 truncate">${h.content || ''}</span>
+            const m = catMeta[h._type] || catMeta.other;
+            return `<div class="flex items-start gap-2 px-4 py-2.5 hover:bg-gray-50/50">
+              <span class="text-[10px] text-gray-400 font-bold w-14 shrink-0 mt-0.5">${ds}</span>
+              <span class="text-[9px] font-bold text-${m.color}-500 bg-${m.color}-50 px-1.5 py-0.5 rounded shrink-0">${h.category}</span>
+              <div class="min-w-0 flex-1">
+                <span class="text-xs font-bold text-gray-800">${h.name}</span>
+                <p class="text-[10px] text-gray-400 mt-0.5 break-words whitespace-normal">${h.content || ''}</p>
+              </div>
+              ${h._guild ? `<span class="text-[8px] text-gray-300 font-bold shrink-0">${h._guild.replace('카롱','')}</span>` : ''}
             </div>`;
           }).join('')}
         </div>
-      </div>`).join('')}
-      `}
+      </div>`}
     </div>`;
   };
 
