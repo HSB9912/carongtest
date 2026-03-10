@@ -7279,8 +7279,7 @@
         ocid: ocid
       });
       if (rankData && rankData.ranking && rankData.ranking.length > 0) {
-        const mainName = rankData.ranking[0].character_name;
-        return mainName !== characterName ? mainName : null;
+        return rankData.ranking[0].character_name;
       }
       return null;
     } catch(e) {
@@ -7688,9 +7687,10 @@
       try {
         const mainName = await window._guessMainChar(members[i].name);
         if (mainName) {
-          el.innerHTML = `<button onclick="window._applyGuess(${i},'${mainName.replace(/'/g,"\\'")}')" class="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg hover:bg-purple-100 transition-all" title="클릭하면 본캐닉에 적용">${mainName} <i class="fas fa-arrow-left text-[8px] ml-1"></i></button>`;
+          const isSelf = mainName === members[i].name;
+          el.innerHTML = `<button onclick="window._applyGuess(${i},'${mainName.replace(/'/g,"\\'")}')" class="text-[10px] font-bold ${isSelf ? 'text-amber-600 bg-amber-50' : 'text-purple-600 bg-purple-50'} px-2 py-1 rounded-lg hover:opacity-80 transition-all" title="${isSelf ? '유니온 대표 = 자기자신 (이 캐릭이 계정 최고레벨)' : '클릭하면 본캐닉에 적용'}">${mainName}${isSelf ? '' : ' <i class="fas fa-arrow-left text-[8px] ml-1"></i>'}</button>`;
         } else {
-          el.innerHTML = '<span class="text-[9px] text-gray-300">본캐</span>';
+          el.innerHTML = '<span class="text-[9px] text-gray-300">미확인</span>';
         }
       } catch(e) {
         el.innerHTML = '<span class="text-[9px] text-red-300">실패</span>';
