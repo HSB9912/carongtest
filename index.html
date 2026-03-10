@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>뚠카롱 길드 관리 시스템 (v9.1 Supabase)</title>
+ <title>뚠카롱 길드 관리 시스템</title>
  <script src="https://cdn.tailwindcss.com"></script>
  <script>tailwind.config = { darkMode: 'class' }</script>
  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -105,6 +105,7 @@
    <button onclick="window._setFontSize('lg')" class="font-sz-btn px-2 py-1 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all" data-size="lg">가</button>
    </div>
    <p class="text-[10px] text-green-500 uppercase tracking-widest text-center"><i class="fas fa-cloud mr-1 animate-pulse"></i> Supabase Connected</p>
+   <p class="text-[8px] text-gray-300 text-center mt-1" id="appVersion"></p>
   </div>
  </aside>
 
@@ -236,6 +237,7 @@
  </div>
 
  <script>
+  const APP_VERSION = '2026.03.10.0615';
   const SUPABASE_URL = 'https://luglshrfkkeacmefnvlm.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z2xzaHJma2tlYWNtZWZudmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjE0NTIsImV4cCI6MjA4NzYzNzQ1Mn0.LrJ-ejXJGqVGzrJyL5nFW45J92-MxrcKuEpE2EGNsIo';
   const supaDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -4711,7 +4713,6 @@
     end.setHours(23,59,59,999);
     return { start, end };
   };
-
   window._fmtDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   window._dayNames = ['일','월','화','수','목','금','토'];
 
@@ -4726,9 +4727,8 @@
     if (cat === '설정') return '_skip';
     return 'other';
   };
-
   window._extractGuild = (h) => {
-    const c = h.content || '';
+    const c = (h.content || '') + ' ' + (h.name || '');
     const m = c.match(/(뚠카롱|뚱카롱|밤카롱|별카롱|달카롱|꿀카롱)/);
     return m ? m[1] : '';
   };
@@ -4749,15 +4749,14 @@
     const catMeta = {
       all: { label: '전체', icon: 'fa-list', color: 'pink' },
       join: { label: '가입', icon: 'fa-user-plus', color: 'emerald' },
-      leave: { label: '탈퇴/추방', icon: 'fa-user-minus', color: 'red' },
-      move: { label: '길드 이동', icon: 'fa-exchange-alt', color: 'blue' },
+      leave: { label: '탈퇴', icon: 'fa-user-minus', color: 'red' },
+      move: { label: '이동', icon: 'fa-exchange-alt', color: 'blue' },
       nick: { label: '닉변', icon: 'fa-id-badge', color: 'purple' },
-      edit: { label: '정보 수정', icon: 'fa-edit', color: 'amber' },
-      role: { label: '직위 변경', icon: 'fa-medal', color: 'orange' },
+      edit: { label: '수정', icon: 'fa-edit', color: 'amber' },
+      role: { label: '직위', icon: 'fa-medal', color: 'orange' },
       other: { label: '기타', icon: 'fa-ellipsis-h', color: 'gray' },
     };
 
-    // 분류
     const catCounts = {};
     Object.keys(catMeta).forEach(k => catCounts[k] = 0);
     const classified = history.map(h => {
@@ -4768,78 +4767,71 @@
       return { ...h, _type: type, _guild: window._extractGuild(h) };
     }).filter(Boolean);
 
-    // 길드 목록 추출
     const guildSet = new Set();
     classified.forEach(h => { if (h._guild) guildSet.add(h._guild); });
     const guildList = [...guildSet].sort();
 
-    // 필터 적용
     let filtered = classified;
     if (ws.filter !== 'all') filtered = filtered.filter(h => h._type === ws.filter);
     if (ws.guild) filtered = filtered.filter(h => h._guild === ws.guild);
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const activeFilter = ws.filter || 'all';
+    const af = ws.filter || 'all';
+    const catColors = { join:'#10b981', leave:'#ef4444', move:'#3b82f6', nick:'#a855f7', edit:'#f59e0b', role:'#f97316', other:'#9ca3af' };
 
     container.innerHTML = `
-    <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 lg:p-4 flex items-center gap-3">
-        <button onclick="window._weeklyLogState.weekOffset++;window.renderWeeklyLog(document.getElementById('contentArea'))" class="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-pink-100 text-gray-500 transition-all"><i class="fas fa-chevron-left text-[10px]"></i></button>
+    <div class="flex flex-col gap-2 fade-in h-full">
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-2 flex items-center gap-2 shrink-0">
+        <button onclick="window._weeklyLogState.weekOffset++;window.renderWeeklyLog(document.getElementById('contentArea'))" class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-pink-100 text-gray-500"><i class="fas fa-chevron-left text-[9px]"></i></button>
         <div class="flex-1 text-center">
-          <div class="text-sm font-black text-gray-800">${startStr}(${startDay}) ~ ${endStr}(${endDay})</div>
-          <div class="text-[10px] text-gray-400 font-bold">${ws.weekOffset === 0 ? '이번 주' : ws.weekOffset === 1 ? '지난 주' : ws.weekOffset + '주 전'}</div>
+          <span class="text-xs font-black text-gray-800">${startStr}(${startDay}) ~ ${endStr}(${endDay})</span>
+          <span class="text-[9px] text-gray-400 font-bold ml-2">${ws.weekOffset === 0 ? '이번 주' : ws.weekOffset === 1 ? '지난 주' : ws.weekOffset + '주 전'}</span>
         </div>
-        <button onclick="if(window._weeklyLogState.weekOffset>0){window._weeklyLogState.weekOffset--;window.renderWeeklyLog(document.getElementById('contentArea'))}" class="w-8 h-8 flex items-center justify-center rounded-xl ${ws.weekOffset > 0 ? 'bg-gray-100 hover:bg-pink-100 text-gray-500' : 'bg-gray-50 text-gray-300 cursor-not-allowed'} transition-all"><i class="fas fa-chevron-right text-[10px]"></i></button>
-        ${ws.weekOffset > 0 ? `<button onclick="window._weeklyLogState.weekOffset=0;window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-3 py-1.5 bg-pink-500 text-white rounded-xl text-[9px] font-bold shadow hover:bg-pink-600">오늘</button>` : ''}
+        <button onclick="if(window._weeklyLogState.weekOffset>0){window._weeklyLogState.weekOffset--;window.renderWeeklyLog(document.getElementById('contentArea'))}" class="w-7 h-7 flex items-center justify-center rounded-lg ${ws.weekOffset > 0 ? 'bg-gray-100 hover:bg-pink-100 text-gray-500' : 'bg-gray-50 text-gray-200'}"><i class="fas fa-chevron-right text-[9px]"></i></button>
+        ${ws.weekOffset > 0 ? `<button onclick="window._weeklyLogState.weekOffset=0;window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-1 bg-pink-500 text-white rounded-lg text-[8px] font-bold">오늘</button>` : ''}
       </div>
 
-      <!-- 카테고리 필터 카드 -->
-      <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+      <div class="flex items-center gap-1 flex-wrap shrink-0">
         ${Object.entries(catMeta).map(([k, m]) => {
           const cnt = catCounts[k] || 0;
-          const isActive = activeFilter === k;
-          return `<button onclick="window._weeklyLogState.filter='${k}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="rounded-xl border-2 p-2 text-center transition-all ${isActive ? 'border-'+m.color+'-400 bg-'+m.color+'-50 shadow' : 'border-gray-100 bg-white hover:border-gray-200'}">
-            <div class="text-lg font-black ${cnt > 0 ? (isActive ? 'text-'+m.color+'-600' : 'text-'+m.color+'-500') : 'text-gray-200'}">${cnt}</div>
-            <div class="text-[7px] font-bold ${isActive ? 'text-'+m.color+'-600' : 'text-gray-400'}"><i class="fas ${m.icon} mr-0.5"></i>${m.label}</div>
-          </button>`;
+          const isA = af === k;
+          return `<button onclick="window._weeklyLogState.filter='${k}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-0.5 rounded text-[8px] font-bold transition-all ${isA ? 'bg-'+m.color+'-500 text-white shadow' : cnt > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-50 text-gray-300'}">${m.label}${cnt > 0 ? ' '+cnt : ''}</button>`;
         }).join('')}
+        <span class="mx-0.5 text-gray-200">|</span>
+        <button onclick="window._weeklyLogState.guild='';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-0.5 rounded text-[8px] font-bold ${!ws.guild ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'}">전체</button>
+        ${guildList.map(g => `<button onclick="window._weeklyLogState.guild='${g}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2 py-0.5 rounded text-[8px] font-bold ${ws.guild===g ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'}">${g.replace('카롱','')}</button>`).join('')}
+        <span class="text-[8px] text-gray-400 ml-auto">${filtered.length}건</span>
       </div>
 
-      <!-- 길드 필터 -->
-      ${guildList.length > 0 ? `<div class="flex items-center gap-1.5 flex-wrap">
-        <button onclick="window._weeklyLogState.guild='';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${!ws.guild ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">전체</button>
-        ${guildList.map(g => `<button onclick="window._weeklyLogState.guild='${g}';window.renderWeeklyLog(document.getElementById('contentArea'))" class="px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${ws.guild===g ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">${g.replace('카롱','')}</button>`).join('')}
-        <span class="text-[9px] text-gray-400 font-bold ml-auto">${filtered.length}건</span>
-      </div>` : ''}
-
-      <!-- 이력 목록 -->
-      ${filtered.length === 0 ? `
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-        <i class="fas fa-check-circle text-3xl text-emerald-300 mb-3"></i>
-        <p class="text-sm font-bold text-gray-400">${activeFilter === 'all' ? '이번 주차에 변동사항이 없습니다' : catMeta[activeFilter]?.label + ' 이력이 없습니다'}</p>
-      </div>` : `
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="divide-y divide-gray-50" style="max-height:55vh;overflow-y:auto">
-          ${filtered.map(h => {
-            const d = new Date(h.date);
-            const ds = `${d.getMonth()+1}/${d.getDate()}(${window._dayNames[d.getDay()]})`;
-            const m = catMeta[h._type] || catMeta.other;
-            return `<div class="flex items-start gap-2 px-4 py-2.5 hover:bg-gray-50/50">
-              <span class="text-[10px] text-gray-400 font-bold w-14 shrink-0 mt-0.5">${ds}</span>
-              <span class="text-[9px] font-bold text-${m.color}-500 bg-${m.color}-50 px-1.5 py-0.5 rounded shrink-0">${h.category}</span>
-              <div class="min-w-0 flex-1">
-                <span class="text-xs font-bold text-gray-800">${h.name}</span>
-                <p class="text-[10px] text-gray-400 mt-0.5 break-words whitespace-normal">${h.content || ''}</p>
-              </div>
-              ${h._guild ? `<span class="text-[8px] text-gray-300 font-bold shrink-0">${h._guild.replace('카롱','')}</span>` : ''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`}
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-0">
+        ${filtered.length === 0 ? `<div class="p-8 text-center text-gray-300 text-xs font-bold"><i class="fas fa-inbox text-2xl mb-2 block"></i>이력 없음</div>` : `
+        <div class="overflow-auto h-full">
+        <table class="w-full text-[9px] lg:text-[10px] border-collapse stick-head">
+          <thead class="bg-gray-50 text-[8px] font-bold text-gray-400 uppercase">
+            <tr>
+              <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:52px">날짜</th>
+              <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:44px">구분</th>
+              <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:32px">길드</th>
+              <th class="py-1 px-1.5 text-left border-r border-gray-100" style="width:70px">닉네임</th>
+              <th class="py-1 px-1.5 text-left">상세</th>
+            </tr>
+          </thead>
+          <tbody class="font-bold text-gray-600">
+            ${filtered.map(h => {
+              const d = new Date(h.date);
+              const ds = (d.getMonth()+1)+'/'+d.getDate()+'('+window._dayNames[d.getDay()]+')';
+              const cc = catColors[h._type] || '#9ca3af';
+              const gl = h._guild ? h._guild.replace('카롱','') : '';
+              return '<tr class="border-b border-gray-50 hover:bg-gray-50/50" style="border-left:3px solid '+cc+'"><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+ds+'</td><td class="py-0.5 px-1.5 border-r border-gray-50"><span class="text-[8px] font-bold" style="color:'+cc+'">'+h.category.replace('동기화-','')+'</span></td><td class="py-0.5 px-1.5 text-gray-400 border-r border-gray-50">'+gl+'</td><td class="py-0.5 px-1.5 text-gray-800 border-r border-gray-50">'+h.name+'</td><td class="py-0.5 px-1.5 text-gray-400 text-[8px]">'+(h.content||'')+'</td></tr>';
+            }).join('')}
+          </tbody>
+        </table>
+        </div>`}
+      </div>
     </div>`;
   };
 
-  window.renderGuildStats = (container) => {
+    window.renderGuildStats = (container) => {
     const members = appState.members;
     const guilds = appState.guilds;
     const headers = appState.suroHeaders || [];
@@ -6288,7 +6280,7 @@
    _meta: {
    exported_at: new Date().toISOString(),
    source: SUPABASE_URL,
-   version: '9.1'
+   version: APP_VERSION
    },
    members: await fetchAll('members', 'name'),
    suro_periods: await fetchAll('suro_periods', 'id'),
@@ -8993,6 +8985,9 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
    initSidebar();
+   const ve = document.getElementById('appVersion');
+   if (ve) ve.textContent = 'v' + APP_VERSION;
+   document.title = '뚠카롱 길드 관리 시스템 (v' + APP_VERSION + ')';
    await window._authCheck();
    window.fetchMembers();
   });
