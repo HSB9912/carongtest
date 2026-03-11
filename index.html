@@ -4682,7 +4682,7 @@
             <tbody class="divide-y divide-gray-100 font-bold text-gray-700">
               ${filtered.map(t => {
                 const rd = SITE_CONFIG?.roleDisplay?.[t.main.role] || {};
-                const bgStyle = rd.rowColor ? `background:${rd.rowColor}15` : '';
+                const bgStyle = rd.rowColor ? (() => { const c = rd.rowColor; const r = parseInt(c.slice(1,3),16); const g = parseInt(c.slice(3,5),16); const b = parseInt(c.slice(5,7),16); return `background-color:rgba(${r},${g},${b},0.1)`; })() : '';
                 const badgeStyle = rd.bgColor ? `background:${rd.bgColor};color:${rd.textColor||'white'}` : 'background:#f3f4f6;color:#6b7280';
                 const cells = Array.from({length: subCols}, (_, i) => {
                   const s = t.subs[i];
@@ -4715,23 +4715,60 @@
   window._subCharsCopy = () => {
     const table = document.getElementById('subCharsTable');
     if (!table) return;
+
     let tsv = '';
     table.querySelectorAll('tr').forEach(tr => {
       const cells = [];
-      tr.querySelectorAll('th, td').forEach(td => {
-        cells.push(td.innerText.trim());
-      });
+      tr.querySelectorAll('th, td').forEach(td => cells.push(td.innerText.trim()));
       tsv += cells.join('\t') + '\n';
     });
-    navigator.clipboard.writeText(tsv).then(() => {
-      window.showMsg('시트에 붙여넣기 가능! (탭 구분 복사됨)', 'success');
-    }).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = tsv; document.body.appendChild(ta);
-      ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta);
-      window.showMsg('복사 완료!', 'success');
+
+    let html = '<table border="1" cellpadding="4" style="border-collapse:collapse;font-size:11px;font-family:sans-serif">';
+    table.querySelectorAll('tr').forEach(tr => {
+      const rowBg = tr.style.background || tr.style.backgroundColor || '';
+      const rowStyle = rowBg ? `background:${rowBg};` : '';
+      html += `<tr style="${rowStyle}">`;
+      tr.querySelectorAll('th, td').forEach(cell => {
+        const tag = cell.tagName.toLowerCase();
+        let cellBg = '', cellColor = '';
+        // 1. 셀 안의 span style 확인
+        const spans = cell.querySelectorAll('span[style]');
+        spans.forEach(span => {
+          const s = span.style;
+          if (s.backgroundColor || s.background) {
+            cellBg = s.backgroundColor || s.background;
+            cellColor = s.color || 'white';
+          }
+        });
+        // 2. 셀 자체 style
+        if (!cellBg && cell.style.backgroundColor) { cellBg = cell.style.backgroundColor; cellColor = cell.style.color || ''; }
+        // 3. 행 배경 상속
+        if (!cellBg && rowBg) { cellBg = rowBg; }
+
+        const style = `border:1px solid #ccc;padding:2px 5px;font-weight:bold;${cellBg ? 'background:'+cellBg+';' : ''}${cellColor ? 'color:'+cellColor+';' : ''}`;
+        html += `<${tag} style="${style}">${cell.innerText.trim()}</${tag}>`;
+      });
+      html += '</tr>';
     });
+    html += '</table>';
+
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      const blobText = new Blob([tsv], { type: 'text/plain' });
+      navigator.clipboard.write([new ClipboardItem({ 'text/html': blob, 'text/plain': blobText })]).then(() => {
+        window.showMsg('서식+색상 포함 복사 완료! 시트에 Ctrl+V', 'success');
+      });
+    } catch(e) {
+      navigator.clipboard.writeText(tsv).then(() => {
+        window.showMsg('텍스트 복사 완료 (서식 미지원 브라우저)', 'success');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = tsv; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        window.showMsg('복사 완료!', 'success');
+      });
+    }
   };
 
   // ============ 주간 이력 ============
