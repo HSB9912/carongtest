@@ -1235,7 +1235,7 @@
             else if (tab === 'guide_edit' && isAdmin()) window.renderGuideEditor(content);
             else if (tab === 'history' && isAdmin()) window.renderHistory(content);
             else if (tab === 'sync' && isAdmin()) window.renderSync(content);
-            else if (tab === 'settings' && isAdmin()) { window.renderSettings(content); setTimeout(() => window._loadAdminList(), 100); }
+            else if (tab === 'settings' && isAdmin()) { window.renderSettings(content); setTimeout(() => { window._loadAdminList(); if(window._settingsTab==='roulette') window._rouletteRenderSettings(); }, 100); }
             else if (tab === 'role_assign' && isAdmin()) window.renderRoleAssign(content);
             else if (tab === 'records' && isAdmin()) window.renderRecords(content);
             const _sb = document.getElementById('sidebar'), _ov = document.getElementById('sidebarOverlay');
@@ -4979,7 +4979,7 @@
 
   window._statsSubTab = 'guild';
   // ============ 뚠뚠 버디 ============
-  const BUDDY_ROULETTE_ITEMS = [
+  const DEFAULT_ROULETTE_ITEMS = [
     { name:'다조 120개', prob:23.4, value:'8억', color:'#6b7280' },
     { name:'다조 160개', prob:17.3, value:'11억', color:'#3b82f6' },
     { name:'다조 240개', prob:13.7, value:'15.5억', color:'#10b981' },
@@ -4993,6 +4993,75 @@
     { name:'다조 3000개', prob:0.9, value:'186억', color:'#7c3aed' },
     { name:'언더컨', prob:0.1, value:'200억', color:'#eab308' },
   ];
+
+  window._getRouletteItems = () => {
+    return SITE_CONFIG?.rouletteItems || DEFAULT_ROULETTE_ITEMS;
+  };
+
+  // 설정 탭 렌더
+  window._rouletteRenderSettings = () => {
+    const items = window._getRouletteItems();
+    const tbody = document.getElementById('rouletteItemsBody');
+    if (!tbody) return;
+    tbody.innerHTML = items.map((item, i) => `<tr class="border-b border-gray-50 hover:bg-purple-50/30" data-idx="${i}">
+      <td class="p-1.5"><input type="text" value="${item.name}" class="ri-name w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none"></td>
+      <td class="p-1.5"><input type="number" step="0.1" value="${item.prob}" class="ri-prob w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none text-center"></td>
+      <td class="p-1.5"><input type="text" value="${item.value}" class="ri-value w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none"></td>
+      <td class="p-1.5 text-center"><input type="color" value="${item.color}" class="ri-color w-8 h-8 rounded cursor-pointer border-0"></td>
+      <td class="p-1.5 text-center"><button onclick="this.closest('tr').remove();window._rouletteUpdateTotal()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
+    </tr>`).join('');
+    window._rouletteUpdateTotal();
+  };
+
+  window._rouletteAddItem = () => {
+    const tbody = document.getElementById('rouletteItemsBody');
+    if (!tbody) return;
+    const idx = tbody.children.length;
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-50 hover:bg-purple-50/30';
+    tr.innerHTML = `
+      <td class="p-1.5"><input type="text" value="" class="ri-name w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none" placeholder="품목명"></td>
+      <td class="p-1.5"><input type="number" step="0.1" value="0" class="ri-prob w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none text-center"></td>
+      <td class="p-1.5"><input type="text" value="" class="ri-value w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none" placeholder="시세"></td>
+      <td class="p-1.5 text-center"><input type="color" value="#6b7280" class="ri-color w-8 h-8 rounded cursor-pointer border-0"></td>
+      <td class="p-1.5 text-center"><button onclick="this.closest('tr').remove();window._rouletteUpdateTotal()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>`;
+    tbody.appendChild(tr);
+    window._rouletteUpdateTotal();
+  };
+
+  window._rouletteUpdateTotal = () => {
+    const rows = document.querySelectorAll('#rouletteItemsBody tr');
+    let total = 0;
+    rows.forEach(r => { total += parseFloat(r.querySelector('.ri-prob')?.value) || 0; });
+    const el = document.getElementById('rouletteTotalProb');
+    if (el) {
+      const ok = Math.abs(total - 100) < 0.5;
+      el.textContent = `합계: ${total.toFixed(1)}%`;
+      el.className = `text-[10px] font-bold ${ok ? 'text-green-500' : 'text-red-500'}`;
+    }
+  };
+
+  window._rouletteSave = async () => {
+    const rows = document.querySelectorAll('#rouletteItemsBody tr');
+    const items = [];
+    rows.forEach(r => {
+      const name = r.querySelector('.ri-name')?.value?.trim();
+      const prob = parseFloat(r.querySelector('.ri-prob')?.value) || 0;
+      const value = r.querySelector('.ri-value')?.value?.trim() || '';
+      const color = r.querySelector('.ri-color')?.value || '#6b7280';
+      if (name && prob > 0) items.push({ name, prob, value, color });
+    });
+    const total = items.reduce((s, i) => s + i.prob, 0);
+    if (Math.abs(total - 100) > 1) {
+      if (!confirm(`확률 합계가 ${total.toFixed(1)}%입니다. 100%가 아니어도 저장하시겠습니까?`)) return;
+    }
+    try {
+      const cfg = { ...SITE_CONFIG, rouletteItems: items };
+      await supaDb.from('site_config').upsert({ id: 1, config: cfg });
+      SITE_CONFIG.rouletteItems = items;
+      window.showMsg(`룰렛 설정 저장! (${items.length}개 품목)`, 'success');
+    } catch(e) { window.showMsg('저장 실패: '+e.message, 'error'); }
+  };
 
   // 이미지 확대 오버레이
   window._showImageOverlay = (url) => {
@@ -5120,7 +5189,7 @@
         <div class="bg-purple-50 rounded-2xl border border-purple-200 p-4">
           <p class="text-sm font-bold text-purple-700 mb-3 text-center">🎰 B보상 칠흑 가챠 룰렛 ${!allClear ? '<span class="text-[9px] text-amber-500">(⚠ 미션 미완료)</span>' : ''}</p>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-1 mb-4">
-            ${BUDDY_ROULETTE_ITEMS.map(item => `<div class="bg-white rounded-lg p-1.5 border border-purple-100 text-center"><span class="text-[9px] font-bold" style="color:${item.color}">${item.name}</span><br><span class="text-[8px] text-gray-400">${item.prob}%</span><br><span class="text-[8px] text-gray-300">${item.value}</span></div>`).join('')}
+            ${window._getRouletteItems().map(item => `<div class="bg-white rounded-lg p-1.5 border border-purple-100 text-center"><span class="text-[9px] font-bold" style="color:${item.color}">${item.name}</span><br><span class="text-[8px] text-gray-400">${item.prob}%</span><br><span class="text-[8px] text-gray-300">${item.value}</span></div>`).join('')}
           </div>
           <div id="rouletteDisplay" class="mb-4">
             <div class="bg-white rounded-2xl border-4 border-purple-300 p-8 text-center">
@@ -5305,7 +5374,7 @@
   window._buddySpinRoulette = async (teamId, isConfirm) => {
     if (isConfirm && !confirm('⚠ 보상을 확정하시겠습니까? 한 번 확정하면 변경할 수 없습니다!')) return;
 
-    const items = BUDDY_ROULETTE_ITEMS;
+    const items = window._getRouletteItems();
     const rand = Math.random() * 100;
     let cumulative = 0, result = items[0];
     for (const item of items) { cumulative += item.prob; if (rand < cumulative) { result = item; break; } }
@@ -6422,10 +6491,11 @@
    const stabs = [
    {id:'system', label:'시스템', icon:'fa-server'},
    {id:'design', label:'디자인', icon:'fa-paint-brush'},
+   {id:'roulette', label:'룰렛', icon:'fa-dice'},
    {id:'admin', label:'관리자', icon:'fa-user-shield'},
    {id:'backup', label:'백업', icon:'fa-download'}
    ];
-   const stabsHtml = stabs.map(t => `<button onclick="window._settingsTab='${t.id}';window.renderSettings(document.getElementById('contentArea'));${t.id==='admin'?'setTimeout(()=>window._loadAdminList(),100)':''}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${sTab===t.id ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}"><i class="fas ${t.icon} mr-1"></i>${t.label}</button>`).join('');
+   const stabsHtml = stabs.map(t => `<button onclick="window._settingsTab='${t.id}';window.renderSettings(document.getElementById('contentArea'));${t.id==='admin'?'setTimeout(()=>window._loadAdminList(),100)':''}${t.id==='roulette'?';setTimeout(()=>window._rouletteRenderSettings(),100)':''}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${sTab===t.id ? 'bg-pink-500 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}"><i class="fas ${t.icon} mr-1"></i>${t.label}</button>`).join('');
 
    container.innerHTML = `
    <div class="fade-in space-y-4">
@@ -6500,6 +6570,32 @@
    <div class="flex gap-3 pt-4 border-t border-gray-100">
    <button onclick="window._cfgSave()" id="cfgSaveBtn" class="px-8 py-4 bg-pink-500 text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-pink-600 transition-all"><i class="fas fa-save mr-2"></i>디자인 설정 저장</button>
    <button onclick="window._cfgReset()" class="px-6 py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold text-xs hover:bg-gray-200 transition-all"><i class="fas fa-undo mr-2"></i>초기화</button>
+   </div>
+   </div>
+   </div>
+
+   <div class="${sTab !== 'roulette' ? 'hidden' : ''}">
+   <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 font-bold">
+   <div class="flex items-center gap-3 mb-4">
+   <div class="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center"><i class="fas fa-dice text-purple-500"></i></div>
+   <div><h3 class="text-lg text-gray-800">칠흑 가챠 룰렛 설정</h3><p class="text-[10px] text-gray-400">B보상 룰렛 품목과 확률을 관리합니다 (합계 100%)</p></div>
+   <button onclick="window._rouletteAddItem()" class="ml-auto px-3 py-1.5 bg-purple-500 text-white rounded-xl text-[10px] font-bold hover:bg-purple-600"><i class="fas fa-plus mr-1"></i>품목 추가</button>
+   </div>
+   <div class="overflow-x-auto">
+   <table class="w-full text-xs" id="rouletteSettingsTable">
+   <thead><tr class="text-[9px] text-gray-400 uppercase border-b">
+   <th class="p-2 text-left" style="width:30%">품목명</th>
+   <th class="p-2 text-center" style="width:15%">확률(%)</th>
+   <th class="p-2 text-left" style="width:15%">시세</th>
+   <th class="p-2 text-center" style="width:15%">색상</th>
+   <th class="p-2 text-center" style="width:10%">삭제</th>
+   </tr></thead>
+   <tbody id="rouletteItemsBody"></tbody>
+   </table>
+   </div>
+   <div class="flex items-center gap-3 mt-4">
+   <span id="rouletteTotalProb" class="text-[10px] font-bold text-gray-400"></span>
+   <button onclick="window._rouletteSave()" class="ml-auto px-5 py-2 bg-purple-500 text-white rounded-xl text-xs font-bold shadow hover:bg-purple-600"><i class="fas fa-save mr-1"></i>저장</button>
    </div>
    </div>
    </div>
