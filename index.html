@@ -1301,7 +1301,7 @@
                         <div class="bg-white p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] border border-gray-100 shadow-sm">
                             <h3 class="text-[10px] lg:text-xs font-bold text-pink-500 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-crown text-pink-400"></i> 뚠카롱 직위 커트라인</h3>
                             <div class="space-y-1.5 text-[10px] lg:text-[11px] font-bold">
-                                <div class="flex justify-between items-center py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100"><span class="text-yellow-700">👑 크라운</span><span class="text-yellow-600">TOP 3</span></div>
+                                <div class="flex justify-between items-center py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100"><span class="text-yellow-700">👑 크라운</span><span class="text-yellow-600">TOP 5</span></div>
                                 <div class="flex justify-between items-center py-1.5 px-2.5 rounded-lg" style="background:linear-gradient(to right,#EBF0FF,#E8EDFF);border:1px solid #D6DFFF"><span class="text-blue-700">🍨 파르페</span><span class="text-blue-600">130,000~</span></div>
                                 <div class="flex justify-between items-center py-1.5 px-2.5 rounded-lg" style="background:linear-gradient(to right,#EBF0FF,#E8EDFF);border:1px solid #D6DFFF"><span class="text-blue-700">🍰 티라미슈</span><span class="text-blue-600">95,000 ~ 129,999</span></div>
                                 <div class="flex justify-between items-center py-1.5 px-2.5 rounded-lg" style="background:linear-gradient(to right,#E8FFE8,#E5FAE5);border:1px solid #C8E6C8"><span class="text-green-700">🥐 크로칸슈</span><span class="text-green-600">72,000 ~ 94,999</span></div>
@@ -4048,25 +4048,32 @@
 
   // ============ 수로 보상 ============
   const REWARD_TIERS = [
-    { grade: '크라운', rank: '1등', ratio: 0.45, pool: 150, benefit: '부캐면제 + 부캐길드면제' },
-    { grade: '크라운', rank: '2등', ratio: 0.33, pool: 150, benefit: '' },
-    { grade: '크라운', rank: '3등', ratio: 0.22, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '4등', ratio: 0.15, pool: 150, benefit: '뚱카롱 부캐1캐릭면제 + 부캐길드면제' },
-    { grade: '파르페', rank: '5등', ratio: 0.14, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '6등', ratio: 0.13, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '7등', ratio: 0.12, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '8등', ratio: 0.11, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '9등', ratio: 0.10, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '10등', ratio: 0.09, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '11등', ratio: 0.06, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '12등', ratio: 0.05, pool: 150, benefit: '' },
-    { grade: '파르페', rank: '13등', ratio: 0.05, pool: 150, benefit: '' },
+    { grade: '크라운', rank: '1등', ratio: 0.28, pool: 100, benefit: '부캐길드 전체면제' },
+    { grade: '크라운', rank: '2등', ratio: 0.24, pool: 100, benefit: '' },
+    { grade: '크라운', rank: '3등', ratio: 0.20, pool: 100, benefit: '' },
+    { grade: '크라운', rank: '4등', ratio: 0.16, pool: 100, benefit: '' },
+    { grade: '크라운', rank: '5등', ratio: 0.12, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '6등', ratio: 0.11, pool: 100, benefit: '부캐길드 전체면제' },
+    { grade: '파르페', rank: '7등', ratio: 0.10, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '8등', ratio: 0.09, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '9등', ratio: 0.08, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '10등', ratio: 0.08, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '11등', ratio: 0.07, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '12등', ratio: 0.07, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '13등', ratio: 0.07, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '14등', ratio: 0.06, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '15등', ratio: 0.06, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '16등', ratio: 0.05, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '17등', ratio: 0.04, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '18등', ratio: 0.04, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '19등', ratio: 0.04, pool: 100, benefit: '' },
+    { grade: '파르페', rank: '20등', ratio: 0.04, pool: 100, benefit: '' },
   ];
   const SCORE_TIERS = [
-    { grade: '티라미슈', label: '상급 길드원', minScore: 135000, pieces: '숫돌 24개', benefit: '전체면제 + 숫돌24개(분기)' },
-    { grade: '크로칸슈', label: '중급 길드원', minScore: 90000, pieces: '-', benefit: '전체면제' },
+    { grade: '티라미슈', label: 'TOP 21~51', pieces: '숫돌 24개', benefit: '전체면제 + 숫돌24개 + 부캐길드면제' },
+    { grade: '크로칸슈', label: '중급 길드원', minScore: 90000, pieces: '-', benefit: '전체면제 + 부캐길드면제' },
     { grade: '롤케이크', label: '평길드원', minScore: 55000, pieces: '-', benefit: '절반면제' },
-    { grade: '팬케이크', label: '강등 위험조', minScore: 0, pieces: '-', benefit: '부캐면제 X (하위 5명)' },
+    { grade: '팬케이크', label: '강등 위험조', minScore: 0, pieces: '-', benefit: '부캐면제 X (하위 10명)' },
   ];
 
   window.renderSuroReward = (container) => {
@@ -4151,12 +4158,12 @@
       '팬케이크': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-600', badge: 'bg-gray-400' },
     };
 
-    const bottom5 = ranked.slice(-5).map(m => m.name);
+    const bottom10 = ranked.slice(-10).map(m => m.name);
     const results = ranked.map((m, i) => {
       const rank = i + 1;
       let grade = '', reward = '', benefit = '', rewardNote = '';
       const ratio = m.isNewbie ? m.activeWeeks / m.weeks : 1;
-      if (rank <= 13) {
+      if (rank <= 20) {
         const tier = REWARD_TIERS[i];
         grade = tier.grade;
         if (piecePrice > 0) {
@@ -4172,19 +4179,19 @@
           reward = `비율 ${(tier.ratio * 100).toFixed(0)}%`;
         }
         benefit = tier.benefit || REWARD_TIERS.find(t => t.grade === grade && t.benefit)?.benefit || '';
-      } else if (m.avg >= 135000) {
+      } else if (rank <= 51) {
         grade = '티라미슈';
         if (m.isNewbie) {
           const adj = Math.round(24 * ratio);
           reward = `숫돌 ${adj}개`; rewardNote = `(24→${adj}, ${Math.round(ratio*100)}%)`;
         } else { reward = '숫돌 24개'; }
-        benefit = '전체면제 + 숫돌';
+        benefit = '전체면제 + 숫돌24개 + 부캐길드면제';
       } else if (m.avg >= 90000) {
-        grade = '크로칸슈'; reward = '-'; benefit = '전체면제';
+        grade = '크로칸슈'; reward = '-'; benefit = '전체면제 + 부캐길드면제';
       } else if (m.avg >= 55000) {
         grade = '롤케이크'; reward = '-'; benefit = '절반면제';
       } else {
-        grade = '팬케이크'; reward = '-'; benefit = bottom5.includes(m.name) ? '부캐면제 X' : '';
+        grade = '팬케이크'; reward = '-'; benefit = bottom10.includes(m.name) ? '부캐면제 X' : '';
       }
       return { ...m, rank, grade, reward, benefit, rewardNote };
     });
@@ -4199,7 +4206,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         ${['크라운','파르페','티라미슈','크로칸슈','롤케이크','팬케이크'].map(g => {
           const c = gc(g); const cnt = results.filter(r => r.grade === g).length;
-          const info = g === '크라운' ? 'TOP 3' : g === '파르페' ? '4~13등' : g === '티라미슈' ? '135,000+' : g === '크로칸슈' ? '90,000+' : g === '롤케이크' ? '55,000+' : '하위';
+          const info = g === '크라운' ? 'TOP 5' : g === '파르페' ? '6~20등' : g === '티라미슈' ? '21~51등' : g === '크로칸슈' ? '90,000+' : g === '롤케이크' ? '55,000+' : '하위 10명';
           return `<div class="${c.bg} ${c.border} border rounded-xl p-2 text-center">
             <div class="text-[10px] font-black ${c.text}">${g}</div>
             <div class="text-lg font-black ${c.text}">${cnt}</div>
