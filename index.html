@@ -4106,7 +4106,7 @@
         <select id="rewardQuarter" onchange="window._rewardChangeQ()" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-[11px] font-bold outline-none">
           ${quarters.map(q => `<option value="${q}" ${q===selQ?'selected':''}>${q}</option>`).join('')}
         </select>
-        ${piecePrice > 0 ? `<span class="text-[10px] text-gray-400 font-bold ml-auto">조각 시세: ${piecePrice.toLocaleString()}만원</span>` : '<span class="text-[10px] text-red-400 font-bold ml-auto">⚠ 조각 시세 미설정 (설정 → 관리자)</span>'}
+        ${piecePrice > 0 ? `<span class="text-[10px] text-gray-400 font-bold ml-auto">솔 에르다 조각 시세: ${piecePrice.toLocaleString()}만원</span>` : '<span class="text-[10px] text-red-400 font-bold ml-auto">⚠ 솔 에르다 조각 시세 미설정 (설정 → 관리자)</span>'}
       </div>
       <div id="rewardContent"></div>
     </div>`;
@@ -4174,7 +4174,7 @@
             pieces = Math.round(pieces * ratio);
             rewardNote = `(${original}→${pieces}, ${Math.round(ratio*100)}%)`;
           }
-          reward = pieces.toLocaleString() + '개';
+          reward = '솔 에르다 조각 ' + pieces.toLocaleString() + '개';
         } else {
           reward = `비율 ${(tier.ratio * 100).toFixed(0)}%`;
         }
@@ -6136,7 +6136,7 @@
    <div><h3 class="text-lg text-gray-800">수로 보상 설정</h3><p class="text-[10px] text-gray-400">조각 시세를 설정하면 크라운/파르페 보상이 자동 계산됩니다</p></div>
    </div>
    <div class="flex items-center gap-3 flex-wrap">
-     <label class="text-xs text-gray-600">조각 1개 시세 (만원)</label>
+     <label class="text-xs text-gray-600">솔 에르다 조각 1개 시세 (만원)</label>
      <input type="number" id="cfgPiecePrice" value="${SITE_CONFIG?.suroReward?.piecePrice || 0}" class="w-32 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-100" placeholder="예: 650">
      <button onclick="window._savePiecePrice()" class="px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold shadow hover:bg-amber-600 transition-all"><i class="fas fa-save mr-1"></i>저장</button>
    </div>
