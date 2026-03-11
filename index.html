@@ -4651,7 +4651,7 @@
 
     // 최대 부캐 수 (컬럼 수 결정)
     const maxSubs = Math.max(1, ...filtered.map(t => t.subs.length));
-    const subCols = Math.min(maxSubs, 6);
+    const subCols = maxSubs;
 
     const gInfo = guilds.find(g => g.name === ss.guild) || {};
 
