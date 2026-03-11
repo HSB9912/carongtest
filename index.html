@@ -6942,7 +6942,30 @@
   window.renderSuroInput = (container) => {
    const currentHeader = window.getSuroPeriodHeader();
    const allHeaders = [...appState.suroHeaders];
-   const headerOptions = allHeaders.includes(currentHeader) ? allHeaders : [...allHeaders, currentHeader];
+   
+   // 빠진 주차 자동 보충: 마지막 DB 주차 ~ 이번 주차 사이
+   const missingHeaders = [];
+   if (allHeaders.length > 0) {
+     const lastH = allHeaders[allHeaders.length - 1];
+     const lastMatch = lastH.match(/(\d{2})-(\d{2})-(\d{2})\(목\)/);
+     if (lastMatch) {
+       let d = new Date(2000 + parseInt(lastMatch[1]), parseInt(lastMatch[2])-1, parseInt(lastMatch[3]));
+       d.setDate(d.getDate() + 7);
+       const curMatch = currentHeader.match(/(\d{2})-(\d{2})-(\d{2})\(목\)/);
+       if (curMatch) {
+         const curD = new Date(2000 + parseInt(curMatch[1]), parseInt(curMatch[2])-1, parseInt(curMatch[3]));
+         while (d <= curD) {
+           const h = window.getSuroPeriodHeader(d);
+           if (!allHeaders.includes(h) && h !== currentHeader) missingHeaders.push(h);
+           d.setDate(d.getDate() + 7);
+         }
+       }
+     }
+   }
+   const headerOptions = [...allHeaders, ...missingHeaders];
+   if (!headerOptions.includes(currentHeader)) headerOptions.push(currentHeader);
+   // 최신 주차가 마지막에 오도록 정렬
+   headerOptions.sort();
 
    container.innerHTML = `
    <div class="flex flex-col gap-3 lg:gap-4 fade-in h-full">
