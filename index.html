@@ -76,6 +76,7 @@
    <button onclick="router('guild_stats')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="guild_stats"><i class="fas fa-chart-pie w-5 text-center text-xs"></i><span>현황</span></button>
    <button onclick="router('suro_reward')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="suro_reward"><i class="fas fa-gift w-5 text-center text-xs"></i><span>수로 보상</span></button>
    <button onclick="router('board')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="board"><i class="fas fa-clipboard w-5 text-center text-xs"></i><span>게시판</span></button>
+   <button onclick="router('buddy')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="buddy"><i class="fas fa-handshake w-5 text-center text-xs"></i><span>뚠뚠 버디</span></button>
    <button onclick="router('bail')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="bail"><i class="fas fa-gem w-5 text-center text-xs"></i><span>보석금</span></button>
    <button onclick="router('penalty')" class="nav-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-600 hover:bg-pink-50 font-bold text-sm" data-target="penalty"><i class="fas fa-exclamation-triangle w-5 text-center text-xs"></i><span>벌점</span></button>
    <div class="admin-only hidden" id="adminMenuSection">
@@ -1215,7 +1216,7 @@
             const content = document.getElementById('contentArea'); if(!content) return;
             content.innerHTML = '';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.target === tab));
-            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '현황', suro_reward: '수로 보상', board: '게시판', sub_chars: '부캐 현황', weekly_log: '주간 이력', all_history: '이력', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
+            const titles = { home: '홈', members: '길드원', analysis: '수로 분석', guild_stats: '현황', suro_reward: '수로 보상', board: '게시판', buddy: '뚠뚠 버디', sub_chars: '부캐 현황', weekly_log: '주간 이력', all_history: '이력', suro_input: '수로 입력', bail: '보석금', penalty: '벌점', sheet: 'DB 시트', guide_edit: '가이드 편집', history: '운영 이력', records: '영구 기록', sync: '동기화', settings: '설정', role_assign: '직위 반영' };
             document.getElementById('pageTitle').innerText = titles[tab] || '';
             if (tab === 'home') window.renderHome(content);
             else if (tab === 'members') window.renderMembers(content);
@@ -1223,6 +1224,7 @@
             else if (tab === 'guild_stats') window.renderGuildStatsUnified(content);
             else if (tab === 'suro_reward') window.renderSuroReward(content);
             else if (tab === 'board') window.renderBoard(content);
+            else if (tab === 'buddy') window.renderBuddy(content);
             else if (tab === 'sub_chars') window.renderSubChars(content);
             else if (tab === 'weekly_log' && isAdmin()) window.renderWeeklyLog(content);
             else if (tab === 'all_history' && isAdmin()) window.renderAllHistory(content);
@@ -4975,6 +4977,287 @@
   };
 
   window._statsSubTab = 'guild';
+  // ============ 뚠뚠 버디 ============
+  const BUDDY_ROULETTE_ITEMS = [
+    { id:'2-2', name:'다조 120개', prob:23.4, value:'8억' },
+    { id:'2-3', name:'다조 160개', prob:17.3, value:'11억' },
+    { id:'2-4', name:'다조 240개', prob:13.7, value:'15.5억' },
+    { id:'2-5', name:'루컨마', prob:11, value:'18.5억' },
+    { id:'2-6', name:'다조 330개', prob:9, value:'20억' },
+    { id:'2-7', name:'생명의 연마석', prob:8, value:'26억' },
+    { id:'2-8', name:'커포링', prob:6.7, value:'30억' },
+    { id:'2-9', name:'마깃안', prob:5.5, value:'31.8억' },
+    { id:'2-10', name:'거대한 공포', prob:3, value:'43억' },
+    { id:'2-11', name:'신념의 연마석', prob:1, value:'100억' },
+    { id:'2-12', name:'다조 3000개', prob:0.9, value:'186억' },
+    { id:'2-13', name:'언더컨', prob:0.1, value:'200억' },
+  ];
+
+  window.renderBuddy = async (container) => {
+    container.innerHTML = '<div class="p-8 text-center text-gray-400 text-xs font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>로딩 중...</div>';
+    try {
+      const {data: teams, error} = await supaDb.from('buddy_teams').select('*').order('created_at', {ascending: false});
+      if (error) throw error;
+
+      const activeTeams = (teams||[]).filter(t => t.status === 'active');
+      const doneTeams = (teams||[]).filter(t => t.status !== 'active');
+
+      container.innerHTML = `
+      <div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 lg:p-4 flex items-center gap-3 flex-wrap shrink-0">
+          <h3 class="text-sm font-bold text-gray-800"><i class="fas fa-handshake mr-2 text-yellow-400"></i>뚠뚠 버디</h3>
+          <span class="text-[10px] text-gray-400 font-bold">진행 중 ${activeTeams.length}팀 · 완료 ${doneTeams.length}팀</span>
+          ${isAdmin() ? `<button onclick="window._buddyCreateModal()" class="ml-auto px-3 py-1.5 bg-yellow-500 text-white rounded-xl text-[10px] font-bold shadow hover:bg-yellow-600"><i class="fas fa-plus mr-1"></i>팀 생성</button>` : ''}
+        </div>
+
+        ${activeTeams.length > 0 ? `<div class="space-y-3">
+          ${activeTeams.map(t => window._buddyTeamCard(t, true)).join('')}
+        </div>` : '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-gray-300 text-xs font-bold"><i class="fas fa-inbox text-2xl mb-2 block"></i>진행 중인 버디팀이 없습니다</div>'}
+
+        ${doneTeams.length > 0 ? `
+        <div class="mt-2">
+          <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">완료된 버디팀</h4>
+          <div class="space-y-2">${doneTeams.map(t => window._buddyTeamCard(t, false)).join('')}</div>
+        </div>` : ''}
+      </div>`;
+    } catch(e) {
+      container.innerHTML = '<div class="p-8 text-center text-red-400 text-xs font-bold">로딩 실패: '+e.message+'</div>';
+    }
+  };
+
+  window._buddyTeamCard = (t, isActive) => {
+    const statusColors = {active:'bg-green-500',completed:'bg-blue-500',failed:'bg-red-500',cancelled:'bg-gray-400'};
+    const statusLabels = {active:'진행 중',completed:'완료',failed:'실패',cancelled:'취소'};
+    const sc = statusColors[t.status]||'bg-gray-400';
+    const sl = statusLabels[t.status]||t.status;
+    return `<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="p-4 flex items-center gap-3 ${isActive ? 'bg-gradient-to-r from-yellow-50 to-amber-50' : 'bg-gray-50'}">
+        <div class="text-2xl">🤝</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-black text-gray-800">${t.team_name || (t.mentor_name + ' × ' + t.mentee_name)}</span>
+            <span class="text-[8px] font-bold text-white px-1.5 py-0.5 rounded-full ${sc}">${sl}</span>
+            ${t.reward_choice ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded-full ${t.reward_choice==='A'?'bg-emerald-100 text-emerald-600':'bg-purple-100 text-purple-600'}">${t.reward_choice}보상</span>` : ''}
+          </div>
+          <div class="text-[10px] text-gray-500 mt-0.5">
+            <span class="font-bold text-amber-600">멘토</span> ${t.mentor_name} · <span class="font-bold text-blue-600">멘티</span> ${t.mentee_name}
+            <span class="text-gray-300 ml-2">${t.start_date || ''}</span>
+          </div>
+        </div>
+        <button onclick="window._buddyDetail(${t.id})" class="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-[10px] font-bold text-gray-600 hover:bg-gray-50 shrink-0">상세</button>
+      </div>
+    </div>`;
+  };
+
+  // === 팀 상세 ===
+  window._buddyDetail = async (teamId) => {
+    const container = document.getElementById('contentArea');
+    container.innerHTML = '<div class="p-8 text-center text-gray-400 text-xs font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>로딩 중...</div>';
+    try {
+      const {data: team} = await supaDb.from('buddy_teams').select('*').eq('id', teamId).single();
+      const {data: missions} = await supaDb.from('buddy_missions').select('*').eq('team_id', teamId).order('week_number');
+      const {data: roulette} = await supaDb.from('buddy_roulette').select('*').eq('team_id', teamId);
+      const allClear = missions && missions.length === 4 && missions.every(m => m.mentor_clear && m.mentee_clear && m.admin_verified);
+      const myName = CURRENT_USER?.user_metadata?.name || '';
+      const isParticipant = myName === team.mentor_name || myName === team.mentee_name;
+
+      let html = `<div class="flex flex-col gap-3 fade-in h-full overflow-y-auto no-scrollbar">
+        <div class="flex items-center gap-2">
+          <button onclick="window.renderBuddy(document.getElementById('contentArea'))" class="text-[10px] text-gray-400 hover:text-pink-500 font-bold"><i class="fas fa-arrow-left mr-1"></i>목록</button>
+        </div>
+        <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200 p-5">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">🤝</span>
+            <div>
+              <h2 class="text-lg font-black text-gray-800">${team.team_name || (team.mentor_name + ' × ' + team.mentee_name)}</h2>
+              <p class="text-[10px] text-gray-500"><span class="font-bold text-amber-600">멘토</span> ${team.mentor_name} · <span class="font-bold text-blue-600">멘티</span> ${team.mentee_name} · ${team.start_date||''}</p>
+            </div>
+            ${isAdmin() ? `<div class="ml-auto flex gap-1">
+              <select onchange="window._buddyUpdateStatus(${team.id},this.value)" class="text-[9px] bg-white border rounded-lg px-2 py-1 font-bold outline-none">
+                ${['active','completed','failed','cancelled'].map(s => `<option value="${s}" ${team.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+              <select onchange="window._buddyUpdateReward(${team.id},this.value)" class="text-[9px] bg-white border rounded-lg px-2 py-1 font-bold outline-none">
+                <option value="" ${!team.reward_choice?'selected':''}>보상 미선택</option>
+                <option value="A" ${team.reward_choice==='A'?'selected':''}>A보상 (조각)</option>
+                <option value="B" ${team.reward_choice==='B'?'selected':''}>B보상 (룰렛)</option>
+              </select>
+            </div>` : ''}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          ${[1,2,3,4].map(w => {
+            const m = missions?.find(x => x.week_number === w);
+            const cleared = m?.mentor_clear && m?.mentee_clear;
+            const verified = m?.admin_verified;
+            return `<div class="bg-white rounded-xl border ${verified ? 'border-green-200 bg-green-50/30' : cleared ? 'border-yellow-200 bg-yellow-50/30' : 'border-gray-100'} p-3 text-center">
+              <div class="text-[10px] font-bold text-gray-400 mb-1">${w}주차</div>
+              <div class="text-2xl mb-1">${verified ? '✅' : cleared ? '⏳' : m ? '📝' : '⬜'}</div>
+              <div class="text-[9px] font-bold ${verified ? 'text-green-600' : cleared ? 'text-yellow-600' : 'text-gray-300'}">${verified ? '확인 완료' : cleared ? '확인 대기' : m ? '진행 중' : '미시작'}</div>
+              ${m ? `<div class="mt-1 space-y-0.5">
+                <div class="text-[8px] ${m.mentor_clear?'text-green-500':'text-gray-300'}">멘토 ${m.mentor_score||0}점 ${m.mentor_clear?'✓':''}</div>
+                <div class="text-[8px] ${m.mentee_clear?'text-green-500':'text-gray-300'}">멘티 ${m.mentee_score||0}점 ${m.mentee_clear?'✓':''}</div>
+              </div>` : ''}
+              ${(isParticipant || isAdmin()) && team.status === 'active' ? `<button onclick="window._buddyMissionModal(${team.id},${w})" class="mt-2 text-[8px] font-bold text-blue-500 hover:text-blue-700"><i class="fas fa-camera mr-0.5"></i>미션</button>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+
+        ${allClear && team.reward_choice === 'B' && (!roulette || roulette.length === 0) && isAdmin() ? `
+        <div class="bg-purple-50 rounded-2xl border border-purple-200 p-4 text-center">
+          <p class="text-sm font-bold text-purple-700 mb-3">🎰 4주차 미션 완료! B보상 룰렛을 돌려주세요</p>
+          <button onclick="window._buddySpinRoulette(${team.id})" class="px-6 py-3 bg-purple-500 text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-purple-600 transition-all animate-pulse">룰렛 돌리기!</button>
+        </div>` : ''}
+
+        ${roulette && roulette.length > 0 ? `
+        <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-5 text-white text-center">
+          <p class="text-xs font-bold opacity-80 mb-1">🎉 B보상 룰렛 결과</p>
+          <p class="text-2xl font-black">${roulette[0].result_item}</p>
+          <p class="text-sm font-bold opacity-80 mt-1">${roulette[0].result_value}</p>
+        </div>` : ''}
+
+        ${allClear && team.reward_choice === 'A' ? `
+        <div class="bg-gradient-to-r from-emerald-500 to-green-500 rounded-2xl p-5 text-white text-center">
+          <p class="text-xs font-bold opacity-80 mb-1">🎉 A보상 확정!</p>
+          <p class="text-lg font-black">멘토·멘티 각 솔 에르다 조각 150개</p>
+        </div>` : ''}
+      </div>`;
+      container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<div class="p-8 text-center text-red-400 text-xs font-bold">오류: '+e.message+'</div>'; }
+  };
+
+  // === 팀 생성 모달 ===
+  window._buddyCreateModal = () => {
+    const members = appState.members.filter(m => m.guild === '뚠카롱' && m.isMain).map(m => m.name).sort();
+    const overlay = document.createElement('div');
+    overlay.id = 'buddyCreateOverlay';
+    overlay.className = 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4';
+    overlay.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+      <h3 class="text-base font-bold text-gray-800"><i class="fas fa-handshake mr-2 text-yellow-400"></i>버디팀 생성</h3>
+      <div class="space-y-3">
+        <div><label class="text-[10px] font-bold text-gray-400">팀명</label><input id="buddyTeamName" class="w-full bg-gray-50 border rounded-xl px-3 py-2 text-xs font-bold outline-none" placeholder="예: 동물팀"></div>
+        <div><label class="text-[10px] font-bold text-gray-400">멘토 (기존 길드원)</label><select id="buddyMentor" class="w-full bg-gray-50 border rounded-xl px-3 py-2 text-xs font-bold outline-none">${members.map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div>
+        <div><label class="text-[10px] font-bold text-gray-400">멘티 (신규 길드원)</label><select id="buddyMentee" class="w-full bg-gray-50 border rounded-xl px-3 py-2 text-xs font-bold outline-none">${members.map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div>
+        <div><label class="text-[10px] font-bold text-gray-400">보상 선택</label><select id="buddyReward" class="w-full bg-gray-50 border rounded-xl px-3 py-2 text-xs font-bold outline-none"><option value="">미정</option><option value="A">A보상 (솔 에르다 조각 확정)</option><option value="B">B보상 (칠흑 가챠 룰렛)</option></select></div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="window._buddyCreate()" class="flex-1 py-2.5 bg-yellow-500 text-white rounded-xl text-xs font-bold shadow hover:bg-yellow-600">생성</button>
+        <button onclick="document.getElementById('buddyCreateOverlay').remove()" class="flex-1 py-2.5 bg-gray-200 text-gray-600 rounded-xl text-xs font-bold">취소</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  };
+
+  window._buddyCreate = async () => {
+    const name = document.getElementById('buddyTeamName')?.value?.trim() || '';
+    const mentor = document.getElementById('buddyMentor')?.value;
+    const mentee = document.getElementById('buddyMentee')?.value;
+    const reward = document.getElementById('buddyReward')?.value || '';
+    if (!mentor || !mentee) return window.showMsg('멘토/멘티를 선택하세요', 'error');
+    if (mentor === mentee) return window.showMsg('멘토와 멘티가 같습니다', 'error');
+    try {
+      const {error} = await supaDb.from('buddy_teams').insert({team_name: name, mentor_name: mentor, mentee_name: mentee, reward_choice: reward, start_date: new Date().toISOString().split('T')[0]});
+      if (error) throw error;
+      document.getElementById('buddyCreateOverlay')?.remove();
+      window.showMsg('버디팀이 생성되었습니다!', 'success');
+      window.renderBuddy(document.getElementById('contentArea'));
+    } catch(e) { window.showMsg('생성 실패: '+e.message, 'error'); }
+  };
+
+  // === 미션 모달 ===
+  window._buddyMissionModal = async (teamId, week) => {
+    const {data: mission} = await supaDb.from('buddy_missions').select('*').eq('team_id', teamId).eq('week_number', week).maybeSingle();
+    const imgs = mission?.proof_images || [];
+    const overlay = document.createElement('div');
+    overlay.id = 'buddyMissionOverlay';
+    overlay.className = 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4';
+    overlay.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+      <h3 class="text-base font-bold text-gray-800"><i class="fas fa-camera mr-2 text-blue-400"></i>${week}주차 미션</h3>
+      ${imgs.length > 0 ? `<div class="flex flex-wrap gap-2">${imgs.map(u=>`<img src="${u}" class="h-24 rounded-lg border cursor-pointer" onclick="window.open('${u}')">`).join('')}</div>` : ''}
+      <div>
+        <label class="text-[10px] font-bold text-gray-400">미션 인증 사진 업로드</label>
+        <input type="file" id="buddyMissionFile" accept="image/*" multiple class="text-[10px] mt-1">
+      </div>
+      ${isAdmin() ? `<div class="grid grid-cols-2 gap-3">
+        <div><label class="text-[10px] font-bold text-gray-400">멘토 점수</label><input type="number" id="bmMentorScore" value="${mission?.mentor_score||0}" class="w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-xs font-bold outline-none"></div>
+        <div><label class="text-[10px] font-bold text-gray-400">멘티 점수</label><input type="number" id="bmMenteeScore" value="${mission?.mentee_score||0}" class="w-full bg-gray-50 border rounded-lg px-2 py-1.5 text-xs font-bold outline-none"></div>
+        <label class="flex items-center gap-2 text-[10px] font-bold text-gray-600"><input type="checkbox" id="bmMentorClear" ${mission?.mentor_clear?'checked':''}> 멘토 클리어</label>
+        <label class="flex items-center gap-2 text-[10px] font-bold text-gray-600"><input type="checkbox" id="bmMenteeClear" ${mission?.mentee_clear?'checked':''}> 멘티 클리어</label>
+        <label class="col-span-2 flex items-center gap-2 text-[10px] font-bold text-green-600"><input type="checkbox" id="bmVerified" ${mission?.admin_verified?'checked':''}> ✅ 관리자 확인 완료</label>
+      </div>` : ''}
+      <div class="flex gap-2 pt-2">
+        <button onclick="window._buddyMissionSave(${teamId},${week})" class="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold shadow hover:bg-blue-600">저장</button>
+        <button onclick="document.getElementById('buddyMissionOverlay').remove()" class="flex-1 py-2.5 bg-gray-200 text-gray-600 rounded-xl text-xs font-bold">닫기</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  };
+
+  window._buddyMissionSave = async (teamId, week) => {
+    try {
+      let imageUrls = [];
+      const fileInput = document.getElementById('buddyMissionFile');
+      if (fileInput?.files?.length > 0) {
+        for (const file of Array.from(fileInput.files).slice(0,5)) {
+          const path = 'buddy/' + Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + file.name.split('.').pop();
+          const {error: upErr} = await supaDb.storage.from('board-images').upload(path, file);
+          if (upErr) throw upErr;
+          imageUrls.push(SUPABASE_URL + '/storage/v1/object/public/board-images/' + path);
+        }
+      }
+      const {data: existing} = await supaDb.from('buddy_missions').select('*').eq('team_id', teamId).eq('week_number', week).maybeSingle();
+      const mData = { team_id: teamId, week_number: week };
+      if (imageUrls.length > 0) mData.proof_images = [...(existing?.proof_images||[]), ...imageUrls];
+      if (isAdmin()) {
+        mData.mentor_score = parseInt(document.getElementById('bmMentorScore')?.value)||0;
+        mData.mentee_score = parseInt(document.getElementById('bmMenteeScore')?.value)||0;
+        mData.mentor_clear = document.getElementById('bmMentorClear')?.checked||false;
+        mData.mentee_clear = document.getElementById('bmMenteeClear')?.checked||false;
+        mData.admin_verified = document.getElementById('bmVerified')?.checked||false;
+        if (mData.admin_verified) { mData.verified_by = CURRENT_USER?.email||''; mData.verified_at = new Date().toISOString(); }
+      }
+      if (existing) {
+        const {error} = await supaDb.from('buddy_missions').update(mData).eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const {error} = await supaDb.from('buddy_missions').insert(mData);
+        if (error) throw error;
+      }
+      document.getElementById('buddyMissionOverlay')?.remove();
+      window.showMsg('미션 저장 완료!', 'success');
+      window._buddyDetail(teamId);
+    } catch(e) { window.showMsg('저장 실패: '+e.message, 'error'); }
+  };
+
+  // === 상태/보상 업데이트 ===
+  window._buddyUpdateStatus = async (id, status) => {
+    await supaDb.from('buddy_teams').update({status}).eq('id', id);
+    window._buddyDetail(id);
+  };
+  window._buddyUpdateReward = async (id, reward) => {
+    await supaDb.from('buddy_teams').update({reward_choice: reward}).eq('id', id);
+    window._buddyDetail(id);
+  };
+
+  // === 룰렛 ===
+  window._buddySpinRoulette = async (teamId) => {
+    if (!confirm('룰렛을 돌리시겠습니까? 한 번만 가능합니다!')) return;
+    const rand = Math.random() * 100;
+    let cumulative = 0;
+    let result = BUDDY_ROULETTE_ITEMS[0];
+    for (const item of BUDDY_ROULETTE_ITEMS) {
+      cumulative += item.prob;
+      if (rand < cumulative) { result = item; break; }
+    }
+    try {
+      const {error} = await supaDb.from('buddy_roulette').insert({team_id: teamId, result_item: result.name, result_value: result.value});
+      if (error) throw error;
+      await supaDb.from('buddy_teams').update({status: 'completed'}).eq('id', teamId);
+      window.showMsg('🎉 룰렛 결과: ' + result.name + ' (' + result.value + ')', 'success');
+      window._buddyDetail(teamId);
+    } catch(e) { window.showMsg('룰렛 실패: '+e.message, 'error'); }
+  };
+
   window.renderGuildStatsUnified = (container) => {
     const st = window._statsSubTab;
     container.innerHTML = `
