@@ -236,7 +236,7 @@
  </div>
 
  <script>
-  const APP_VERSION = '2026.03.10.0615';
+  const APP_VERSION = '2026.03.13.1200';
   const SUPABASE_URL = 'https://luglshrfkkeacmefnvlm.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z2xzaHJma2tlYWNtZWZudmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjE0NTIsImV4cCI6MjA4NzYzNzQ1Mn0.LrJ-ejXJGqVGzrJyL5nFW45J92-MxrcKuEpE2EGNsIo';
   const supaDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -5095,25 +5095,38 @@
   // ============ 승강제 시스템 ============
   window._promoSubTab = 'ranking';
 
-  window._getLatestWeekScores = (guildName) => {
+  window._getPromoHeader = () => {
     const headers = appState.suroHeaders || [];
-    if (headers.length === 0) return [];
-    const latestH = headers[headers.length - 1];
+    if (headers.length === 0) return null;
+    // 메이플 기준 지난주 = 목요일 초기화 기준으로 가장 최근 완료된 주차
+    // 최신 헤더에 유효 점수가 있는지 확인, 없으면 그 이전 주차 사용
+    for (let i = headers.length - 1; i >= 0; i--) {
+      const h = headers[i];
+      const g1 = appState.members.filter(m => m.guild === '뚠카롱' && m.isMain);
+      const hasScores = g1.some(m => (Math.round(Number(m.suro?.[h])) || 0) > 0);
+      if (hasScores) return h;
+    }
+    return headers[headers.length - 1];
+  };
+
+  window._getPromoWeekScores = (guildName) => {
+    const h = window._getPromoHeader();
+    if (!h) return [];
     return appState.members.filter(m => m.guild === guildName && m.isMain).map(m => ({
-      ...m, score: Math.round(Number(m.suro?.[latestH])) || 0,
+      ...m, score: Math.round(Number(m.suro?.[h])) || 0,
     }));
   };
 
   window._get180Cutline = () => {
-    const g1 = window._getLatestWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
+    const g1 = window._getPromoWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
     if (g1.length === 0) return 0;
     const idx = Math.min(179, g1.length - 1);
     return g1[idx].score;
   };
 
-  window._getBottom10 = () => {
-    const g1 = window._getLatestWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
-    return g1.slice(-10).reverse();
+  window._getBottom20 = () => {
+    const g1 = window._getPromoWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
+    return g1.slice(-20).reverse();
   };
 
   window.renderPromotion = async (container) => {
@@ -5124,21 +5137,20 @@
       applicants = data || [];
     } catch(e) {}
 
-    const headers = appState.suroHeaders || [];
-    const latestH = headers[headers.length - 1] || '';
+    const promoH = window._getPromoHeader() || '';
     const cutline = window._get180Cutline();
-    const bottom10 = window._getBottom10();
-    const g1Total = window._getLatestWeekScores('뚠카롱').length;
+    const bottom20 = window._getBottom20();
+    const g1Total = window._getPromoWeekScores('뚠카롱').length;
 
     const challengers = applicants.map(a => {
       const m = appState.members.find(x => x.name === a.name);
-      return { ...a, score: m ? (Math.round(Number(m.suro?.[latestH])) || 0) : 0, member: m };
+      return { ...a, score: m ? (Math.round(Number(m.suro?.[promoH])) || 0) : 0, member: m };
     }).sort((a,b) => b.score - a.score);
 
-    const matchLen = Math.min(challengers.length, bottom10.length);
+    const matchLen = Math.min(challengers.length, bottom20.length);
     const matches = [];
     for (let i = 0; i < matchLen; i++) {
-      const ch = challengers[i]; const df = bottom10[i];
+      const ch = challengers[i]; const df = bottom20[i];
       let result = 'failed', reason = '';
       if (df.score === 0 && ch.score > 0) { result = 'promoted'; reason = '방어자 0점 (자동)'; }
       else if (ch.score > cutline) { result = 'promoted'; reason = '180등 컷 돌파'; }
@@ -5162,7 +5174,7 @@
           <div class="text-right shrink-0">
             <div class="text-[9px] opacity-70">승격 기준 컷라인</div>
             <div class="text-xl font-black">${cutline.toLocaleString()}점</div>
-            <div class="text-[8px] opacity-60">최근 주차 1기 ${Math.min(180, g1Total)}등 점수</div>
+            <div class="text-[8px] opacity-60">기준: ${promoH ? promoH.replace(' 수로 점수','') : '없음'} · 1기 ${Math.min(180, g1Total)}등 점수</div>
           </div>
         </div>
       </div>
@@ -5220,9 +5232,9 @@
       </div>
 
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
-        <h3 class="text-[10px] font-bold text-gray-800 mb-2"><i class="fas fa-shield-alt mr-1 text-red-400"></i>1기 강등 방어자 (하위 10명)</h3>
+        <h3 class="text-[10px] font-bold text-gray-800 mb-2"><i class="fas fa-shield-alt mr-1 text-red-400"></i>1기 강등 방어자 (하위 20명)</h3>
         <div class="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
-          ${bottom10.map((d, i) => `<div class="bg-red-50 rounded-lg p-1.5 text-center border border-red-100">
+          ${bottom20.map((d, i) => `<div class="bg-red-50 rounded-lg p-1.5 text-center border border-red-100">
             <div class="text-[8px] text-red-400">${g1Total - i}등</div>
             <div class="text-[9px] font-bold text-gray-800 truncate">${d.name}</div>
             <div class="text-[9px] text-red-500 font-bold">${d.score.toLocaleString()}</div>
@@ -5307,21 +5319,20 @@
     if (!confirm('승강을 실행하시겠습니까?')) return;
     const btn = document.getElementById('promoExecBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>처리 중...'; }
-    const headers = appState.suroHeaders || [];
-    const latestH = headers[headers.length - 1] || '';
+    const promoH = window._getPromoHeader() || '';
     const cutline = window._get180Cutline();
-    const bottom10 = window._getBottom10();
+    const bottom20 = window._getBottom20();
     let applicants = [];
     try { const {data} = await supaDb.from('promotion_applicants').select('*').eq('status','waiting'); applicants = data || []; } catch(e) {}
     const challengers = applicants.map(a => {
       const m = appState.members.find(x => x.name === a.name);
-      return { ...a, score: m ? (Math.round(Number(m.suro?.[latestH])) || 0) : 0, member: m };
+      return { ...a, score: m ? (Math.round(Number(m.suro?.[promoH])) || 0) : 0, member: m };
     }).sort((a,b) => b.score - a.score);
-    const matchLen = Math.min(challengers.length, bottom10.length);
+    const matchLen = Math.min(challengers.length, bottom20.length);
     const weekLabel = window.getSuroPeriodHeader();
     let ok = 0;
     for (let i = 0; i < matchLen; i++) {
-      const ch = challengers[i]; const df = bottom10[i];
+      const ch = challengers[i]; const df = bottom20[i];
       let result = 'failed', reason = '';
       if (df.score === 0 && ch.score > 0) { result = 'promoted'; reason = '방어자 0점'; }
       else if (ch.score > cutline) { result = 'promoted'; reason = '180등 컷 돌파'; }
