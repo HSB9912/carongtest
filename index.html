@@ -5108,8 +5108,8 @@
   };
 
   window._get180Cutline = () => {
-    const g1 = window._getLatestWeekScores('뚠카롱').sort((a,b) => b.prevScore - a.prevScore);
-    return g1.length >= 180 ? g1[179].prevScore : (g1.length > 0 ? g1[g1.length-1].prevScore : 0);
+    const g1 = window._getLatestWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
+    return g1.length >= 180 ? g1[179].score : (g1.length > 0 ? g1[g1.length-1].score : 0);
   };
 
   window._getBottom10 = () => {
@@ -5165,10 +5165,12 @@
             <p class="text-[11px] opacity-80">매주 목요일 수로 초기화 기준 · 1:1 매칭 트레이드</p>
           </div>
           <div class="text-right">
-            <div class="text-[10px] opacity-70">이번 주 1기 즉시 승격 컷라인</div>
+            <div class="text-[10px] opacity-70">승격 기준 컷라인</div>
             <div class="text-2xl font-black">${cutline.toLocaleString()}점</div>
-            <div class="text-[9px] opacity-60">지난주 1기 180등 점수</div>
+            <div class="text-[9px] opacity-60">최근 주차 1기 180등 점수</div>
           </div>
+        </div>
+        <p class="text-[10px] opacity-60 mt-2">※ 컷라인 돌파 시 수로 초기화(목요일) 또는 자리 발생 시 순차 승강</p>
         </div>
       </div>
 
@@ -5182,8 +5184,10 @@
       </div>
 
       ${st === 'ranking' ? `
-      ${isG2 && !myApplied ? `<button onclick="window._promoApply()" class="w-full py-3 bg-green-500 text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-green-600 transition-all"><i class="fas fa-hand-paper mr-2"></i>승급 신청하기</button>` : ''}
-      ${isG2 && myApplied ? `<button onclick="window._promoCancel()" class="w-full py-3 bg-gray-200 text-gray-600 rounded-2xl font-bold text-sm"><i class="fas fa-times mr-2"></i>승급 신청 취소</button>` : ''}
+      ${isAdmin() ? `<div class="flex gap-2">
+        <input type="text" id="promoAddName" class="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" placeholder="승급 신청자 닉네임 입력">
+        <button onclick="window._promoAddByAdmin()" class="px-4 py-2 bg-green-500 text-white rounded-xl text-xs font-bold shadow hover:bg-green-600"><i class="fas fa-plus mr-1"></i>신청 추가</button>
+      </div>` : ''}
 
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="p-3 border-b border-gray-100 flex items-center gap-2">
@@ -5203,9 +5207,9 @@
               const diff = ch.score - cutline;
               const match = matches.find(m => m.challenger.name === ch.name);
               let badge = '', badgeColor = '';
-              if (match && match.result === 'promoted') { badge = '승격 확정권'; badgeColor = 'bg-green-100 text-green-600'; }
+              if (match && match.result === 'promoted') { badge = '승격 대상'; badgeColor = 'bg-green-100 text-green-600'; }
               else if (rank <= 10 && match) { badge = '조건 미달'; badgeColor = 'bg-yellow-100 text-yellow-600'; }
-              else { badge = '대기중'; badgeColor = 'bg-gray-100 text-gray-400'; }
+              else { badge = '대기'; badgeColor = 'bg-gray-100 text-gray-400'; }
               return `<tr class="border-b border-gray-50 hover:bg-indigo-50/30 ${rank<=3?'bg-amber-50/30':''}">
                 <td class="py-2 px-3 text-center font-black ${rank<=3?'text-amber-500':''}">${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td>
                 <td class="py-2 px-3 text-gray-800">${ch.name}</td>
@@ -5273,17 +5277,19 @@
     if (st === 'history') window._promoLoadHistory();
   };
 
-  window._promoApply = async () => {
-    const myName = CURRENT_USER?.user_metadata?.name || '';
-    const myMember = appState.members.find(m => m.name === myName);
-    if (!myMember) return window.showMsg('로그인 후 이용해주세요', 'error');
-    if (myMember.guild !== '뚱카롱') return window.showMsg('2기(뚱카롱) 길드원만 신청 가능합니다', 'error');
+  window._promoAddByAdmin = async () => {
+    const name = document.getElementById('promoAddName')?.value?.trim();
+    if (!name) return window.showMsg('닉네임을 입력하세요', 'error');
+    const member = appState.members.find(m => m.name === name);
+    if (!member) return window.showMsg('존재하지 않는 멤버입니다: ' + name, 'error');
+    if (member.guild !== '뚱카롱') return window.showMsg(name + '은(는) 뚱카롱 소속이 아닙니다', 'error');
     try {
-      const {error} = await supaDb.from('promotion_applicants').insert({member_id: myMember.id, name: myName});
+      const {error} = await supaDb.from('promotion_applicants').insert({member_id: member.id, name: name});
       if (error) throw error;
-      window.showMsg('승급 신청 완료!', 'success');
+      document.getElementById('promoAddName').value = '';
+      window.showMsg(name + ' 승급 신청 추가!', 'success');
       window.renderPromotion(document.getElementById('contentArea'));
-    } catch(e) { window.showMsg('신청 실패: ' + e.message, 'error'); }
+    } catch(e) { window.showMsg('추가 실패: ' + e.message, 'error'); }
   };
 
   window._promoCancel = async () => {
@@ -8530,6 +8536,7 @@
    <th class="p-2 text-center" style="min-width:50px">본캐</th>
    <th class="p-2 text-left" style="min-width:100px">본캐닉</th>
    <th class="p-2 text-left" style="min-width:100px">추론 본캐</th>
+   <th class="p-2 text-center" style="min-width:50px">승강</th>
    </tr>
    </thead>
    <tbody>
@@ -8568,6 +8575,9 @@
    </td>
    <td class="p-1" id="syncGuess_${i}">
    <span class="text-[9px] text-gray-300">-</span>
+   </td>
+   <td class="p-1 text-center">
+   ${m.guild === '뚱카롱' ? `<input type="checkbox" class="sync-new-promo w-4 h-4 text-indigo-500 rounded cursor-pointer" data-idx="${i}" title="승강 희망">` : '<span class="text-[9px] text-gray-200">-</span>'}
    </td>
    </tr>`;
    }).join('')}
@@ -8812,6 +8822,17 @@
    toAdd.push({ name: m.name, guild, role, class: cls, level: lvl, is_main: isMain, main_char_name: mainChar, join_date: window.getKSTDateStr() });
    });
 
+   const promoNames = [];
+   rows.forEach(row => {
+   const check = row.querySelector('.sync-new-check');
+   if (!check || !check.checked) return;
+   const idx = parseInt(check.dataset.idx);
+   const promoCheck = row.querySelector('.sync-new-promo');
+   if (promoCheck && promoCheck.checked) {
+     promoNames.push(window._syncNewMembers[idx].name);
+   }
+   });
+
    if (toAdd.length === 0) { window.showMsg('추가할 멤버를 선택해주세요.', 'error'); return; }
    const btn = document.getElementById('syncAddBtn');
    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>추가 중...';
@@ -8826,6 +8847,24 @@
 
    window.showMsg(`${toAdd.length}명이 DB에 추가되었습니다!`, 'success');
    await window.fetchMembers();
+
+   // 승강 희망자 자동 등록
+   if (promoNames.length > 0) {
+     const promoInserts = [];
+     for (const pName of promoNames) {
+       const m = appState.members.find(x => x.name === pName);
+       if (m && m.guild === '뚱카롱') {
+         promoInserts.push({ member_id: m.id, name: pName });
+       }
+     }
+     if (promoInserts.length > 0) {
+       try {
+         await supaDb.from('promotion_applicants').insert(promoInserts);
+         window.showMsg(`승강 희망 ${promoInserts.length}명 자동 등록!`, 'success');
+       } catch(e) { console.error('승강 등록 실패:', e); }
+     }
+   }
+
    window._runSync();
    } catch (e) {
    window.showMsg('추가 실패: ' + e.message, 'error');
