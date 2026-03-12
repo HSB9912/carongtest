@@ -5118,7 +5118,9 @@
   };
 
   window._get180Cutline = () => {
-    const g1 = window._getPromoWeekScores('뚠카롱').sort((a,b) => b.score - a.score);
+    const g1 = window._getPromoWeekScores('뚠카롱')
+      .filter(m => m.score > 0)
+      .sort((a,b) => b.score - a.score);
     if (g1.length === 0) return 0;
     const idx = Math.min(179, g1.length - 1);
     return g1[idx].score;
@@ -5174,7 +5176,7 @@
           <div class="text-right shrink-0">
             <div class="text-[9px] opacity-70">승격 기준 컷라인</div>
             <div class="text-xl font-black">${cutline.toLocaleString()}점</div>
-            <div class="text-[8px] opacity-60">기준: ${promoH ? promoH.replace(' 수로 점수','') : '없음'} · 1기 ${Math.min(180, g1Total)}등 점수</div>
+            <div class="text-[8px] opacity-60">기준: ${promoH ? promoH.replace(' 수로 점수','') : '없음'} · 참여 ${window._getPromoWeekScores('뚠카롱').filter(m=>m.score>0).length}명 중 ${Math.min(180, window._getPromoWeekScores('뚠카롱').filter(m=>m.score>0).length)}등</div>
           </div>
         </div>
       </div>
