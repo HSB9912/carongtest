@@ -6863,13 +6863,11 @@
 
    // 직위 이모지/색상 (드래그 순서 지원, 1열)
    const allRoleNames = [...new Set(Object.values(ranks).flat())];
-   // priority가 하나라도 설정되어 있으면 그 순서 사용, 아니면 원래 배열 순서
-   const hasPriority = allRoleNames.some(r => rolePriority[r] !== undefined);
-   const sortedRoleNames = hasPriority ? [...allRoleNames].sort((a, b) => {
-     const pa = rolePriority[a] !== undefined ? rolePriority[a] : 999;
-     const pb = rolePriority[b] !== undefined ? rolePriority[b] : 999;
+   const sortedRoleNames = [...allRoleNames].sort((a, b) => {
+     const pa = rolePriority[a] !== undefined ? rolePriority[a] : (999 + allRoleNames.indexOf(a));
+     const pb = rolePriority[b] !== undefined ? rolePriority[b] : (999 + allRoleNames.indexOf(b));
      return pa - pb;
-   }) : allRoleNames;
+   });
    const rolesHtml = sortedRoleNames.map((rName, ri) => {
      const rd = roleDisplay[rName] || {};
      const tc = rd.textColor || '';
@@ -7269,10 +7267,14 @@
    if (!cfg.roleDisplay[rName]) cfg.roleDisplay[rName] = {};
    cfg.roleDisplay[rName].rowColor = el.value && el.value !== '#ffffff' ? el.value : '';
    });
-   document.querySelectorAll('.cfg-role-priority').forEach(el => {
-   const rName = el.dataset.role;
-   cfg.rolePriority[rName] = parseInt(el.value) || 99;
-   });
+   // DOM 순서 기반으로 priority 수집 (위에 있을수록 낮은 숫자 = 높은 우선순위)
+   const roleList = document.getElementById('cfgRoleList');
+   if (roleList) {
+     roleList.querySelectorAll('.cfg-role-item').forEach((el, idx) => {
+       const rName = el.dataset.role;
+       if (rName) cfg.rolePriority[rName] = idx;
+     });
+   }
 
    cfg.cutoffs = cfg.cutoffs || {};
    document.querySelectorAll('.cfg-cutoff-section').forEach(sec => {
