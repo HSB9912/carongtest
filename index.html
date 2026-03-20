@@ -264,6 +264,35 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z2xzaHJma2tlYWNtZWZudmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjE0NTIsImV4cCI6MjA4NzYzNzQ1Mn0.LrJ-ejXJGqVGzrJyL5nFW45J92-MxrcKuEpE2EGNsIo';
   const supaDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // ── R2 이미지 스토리지 설정 ──
+  const R2_WORKER_URL = 'https://guild-images.hongsb9912.workers.dev';
+  const R2_PUBLIC_URL = 'https://pub-ee3a7d1dfe0a442b96336f0c81289a46.r2.dev';
+  const R2_API_KEY = 'guild-manager-r2-key-2026';
+
+  window._r2Upload = async (bucket, filename, file) => {
+    const res = await fetch(`${R2_WORKER_URL}/upload/${bucket}/${filename}`, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'image/webp', 'X-API-Key': R2_API_KEY },
+      body: file,
+    });
+    if (!res.ok) throw new Error('R2 업로드 실패: ' + res.status);
+    return (await res.json()).url;
+  };
+
+  window._r2Delete = async (bucket, filename) => {
+    const res = await fetch(`${R2_WORKER_URL}/delete/${bucket}/${filename}`, {
+      method: 'DELETE',
+      headers: { 'X-API-Key': R2_API_KEY },
+    });
+    if (!res.ok) throw new Error('R2 삭제 실패: ' + res.status);
+  };
+
+  window._r2List = async (bucket) => {
+    const res = await fetch(`${R2_WORKER_URL}/list/${bucket}`);
+    if (!res.ok) throw new Error('R2 목록 조회 실패: ' + res.status);
+    return res.json();
+  };
+
   let CURRENT_USER = null;
   let userRole = 'guest';
   window.isAdmin = () => userRole === 'admin';
@@ -3684,9 +3713,7 @@
                         try {
                             const ext = file.name.split('.').pop().toLowerCase();
                             const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-                            const { error } = await supaDb.storage.from('guide-images').upload(safeName, file, { cacheControl: '3600', upsert: false });
-                            if (error) throw error;
-                            const { data: { publicUrl } } = supaDb.storage.from('guide-images').getPublicUrl(safeName);
+                            const publicUrl = await window._r2Upload('guide-images', safeName, file);
                             const imgHtml = `<div style="margin:12px 0;text-align:center"><img src="${publicUrl}" style="max-width:100%;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)" alt="이미지"></div>`;
                             editor.focus();
                             document.execCommand('insertHTML', false, imgHtml);
@@ -4029,17 +4056,15 @@
    const container = document.getElementById('imgGalleryContainer');
    if (!container) return;
    try {
-   const { data, error } = await supaDb.storage.from('guide-images').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-   if (error) throw error;
+   const data = await window._r2List('guide-images');
    if (!data || data.length === 0) {
    container.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs"><i class="fas fa-images mr-1"></i>업로드된 이미지가 없습니다.</div>';
    return;
    }
-   const baseUrl = supaDb.storage.from('guide-images').getPublicUrl('')?.data?.publicUrl || '';
    const images = data.filter(f => f.name && !f.name.startsWith('.')).map(f => ({
    name: f.name,
-   url: baseUrl.replace(/\/$/, '') + '/' + f.name,
-   size: f.metadata?.size || 0,
+   url: R2_PUBLIC_URL + '/guide-images/' + f.name,
+   size: f.size || 0,
    created: f.created_at
    }));
 
@@ -4077,11 +4102,7 @@
    if (bar) bar.style.width = `${Math.round((uploaded / files.length) * 100)}%`;
 
    try {
-   const { error } = await supaDb.storage.from('guide-images').upload(safeName, file, {
-   cacheControl: '3600',
-   upsert: false
-   });
-   if (error) throw error;
+   await window._r2Upload('guide-images', safeName, file);
    uploaded++;
    } catch(e) {
    window.showMsg(`업로드 실패 (${file.name}): ${e.message}`, 'error');
@@ -4121,8 +4142,7 @@
   window._guideDeleteImage = async (filename) => {
    if (!confirm(`"${filename}" 이미지를 삭제하시겠습니까?\n가이드에 삽입된 이미지도 깨질 수 있습니다.`)) return;
    try {
-   const { error } = await supaDb.storage.from('guide-images').remove([filename]);
-   if (error) throw error;
+   await window._r2Delete('guide-images', filename);
    window.showMsg('이미지 삭제 완료', 'success');
    await window._guideLoadGallery();
    } catch(e) {
@@ -4185,9 +4205,7 @@
    try {
    const ext = file.name.split('.').pop().toLowerCase();
    const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-   const { error } = await supaDb.storage.from('guide-images').upload(safeName, file, { cacheControl: '3600', upsert: false });
-   if (error) throw error;
-   const { data: { publicUrl } } = supaDb.storage.from('guide-images').getPublicUrl(safeName);
+   const publicUrl = await window._r2Upload('guide-images', safeName, file);
    window._applyImageToTarget(targetEl, publicUrl);
    window.showMsg('이미지 삽입 완료!', 'success');
    } catch(e) {
@@ -4216,8 +4234,7 @@
    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
    try {
-   const { data } = await supaDb.storage.from('guide-images').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-   const baseUrl = supaDb.storage.from('guide-images').getPublicUrl('')?.data?.publicUrl || '';
+   const data = await window._r2List('guide-images');
    const images = (data || []).filter(f => f.name && !f.name.startsWith('.'));
    const grid = document.getElementById('imgPickerGrid');
    if (images.length === 0) {
@@ -4225,7 +4242,7 @@
    return;
    }
    grid.innerHTML = '<div class="grid grid-cols-3 gap-2">' + images.map(f => {
-   const url = baseUrl.replace(/\/$/, '') + '/' + f.name;
+   const url = R2_PUBLIC_URL + '/guide-images/' + f.name;
    return `<div class="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 hover:border-blue-400 cursor-pointer transition-all hover:shadow-md" onclick="window._applyImageToTarget(window._ctxTargetEl,'${url}');document.getElementById('imgPickerModal').remove();window.showMsg('이미지 삽입 완료!','success')">
    <img src="${url}" class="w-full h-20 object-cover" loading="lazy">
    <div class="p-1 text-center"><span class="text-[7px] text-gray-400 truncate block">${f.name}</span></div>
@@ -4301,7 +4318,7 @@
   // ============ 게시판 ============
   window._boardState = { tab: 'notice', page: 1, posts: [], viewingPost: null, composing: false };
   const BOARD_PER_PAGE = 10;
-  const BOARD_STORAGE_URL = SUPABASE_URL + '/storage/v1/object/public/board-images/';
+  const BOARD_STORAGE_URL = R2_PUBLIC_URL + '/board-images/';
 
   window._sanitizeBoardHTML = (html) => {
     if (!html) return '';
@@ -4859,8 +4876,7 @@
         for (const file of files) {
           const ext = file.name.split('.').pop();
           const path = Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + ext;
-          const {error: upErr} = await supaDb.storage.from('board-images').upload(path, file);
-          if (upErr) throw upErr;
+          await window._r2Upload('board-images', path, file);
           imageUrls.push(BOARD_STORAGE_URL + path);
         }
       } else if (editId) {
@@ -6148,9 +6164,8 @@
       if (fileInput?.files?.length > 0) {
         for (const file of Array.from(fileInput.files).slice(0,5)) {
           const path = 'buddy/' + Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + file.name.split('.').pop();
-          const {error: upErr} = await supaDb.storage.from('board-images').upload(path, file);
-          if (upErr) throw upErr;
-          imageUrls.push(SUPABASE_URL + '/storage/v1/object/public/board-images/' + path);
+          await window._r2Upload('board-images', path, file);
+          imageUrls.push(R2_PUBLIC_URL + '/board-images/' + path);
         }
       }
       const {data: existing} = await supaDb.from('buddy_missions').select('*').eq('team_id', teamId).eq('week_number', week).maybeSingle();
@@ -7579,9 +7594,7 @@
     const ext = file.name.split('.').pop().toLowerCase();
     const safeName = 'guild_logo_' + Date.now() + '.' + ext;
     try {
-      const { error } = await supaDb.storage.from('guide-images').upload(safeName, file, { cacheControl: '3600', upsert: true });
-      if (error) throw error;
-      const url = SUPABASE_URL + '/storage/v1/object/public/guide-images/' + safeName;
+      const url = await window._r2Upload('guide-images', safeName, file);
       // SITE_CONFIG에 저장
       const cfg = { ...SITE_CONFIG, guildLogo: url };
       await supaDb.from('site_config').upsert({ id: 1, config: cfg });
