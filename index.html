@@ -7574,11 +7574,11 @@
    +'<h3 class="text-base lg:text-lg mb-2 text-gray-800"><i class="fas fa-download mr-2 text-emerald-500"></i>데이터 백업</h3>'
    +'<p class="text-[10px] text-gray-400 mb-4">전체 DB를 JSON/CSV 단일 파일로 다운로드</p>'
    +'<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">'
-   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-pink-100 rounded-lg flex items-center justify-center"><i class="fas fa-users text-pink-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">members</span><span class="text-[8px] text-gray-400">'+appState.members.length+'건</span></div></div>'
-   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center"><i class="fas fa-chart-line text-emerald-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">suro</span><span class="text-[8px] text-gray-400">'+appState.suroHeaders.length+'주차</span></div></div>'
-   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-gem text-blue-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">bail</span><span class="text-[8px] text-gray-400">'+(appState.bailHistory||[]).length+'건</span></div></div>'
-   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center"><i class="fas fa-exclamation-triangle text-red-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">penalty</span><span class="text-[8px] text-gray-400">'+(appState.penaltyHistory||[]).length+'건</span></div></div>'
-   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-book text-purple-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">records</span><span class="text-[8px] text-gray-400">영구보존</span></div></div>'
+   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100"><div class="flex items-center gap-2 mb-1.5"><div class="w-6 h-6 bg-pink-100 rounded-lg flex items-center justify-center"><i class="fas fa-users text-pink-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">members</span><span class="text-[8px] text-gray-400">'+appState.members.length+'건</span></div></div><div class="flex gap-1"><button onclick="window._backupSingle(\'members\',\'csv\')" class="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[7px] hover:bg-blue-100 cursor-pointer">CSV</button><button onclick="window._backupSingle(\'members\',\'json\')" class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[7px] hover:bg-gray-200 cursor-pointer">JSON</button></div></div>'
+   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100"><div class="flex items-center gap-2 mb-1.5"><div class="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center"><i class="fas fa-chart-line text-emerald-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">suro</span><span class="text-[8px] text-gray-400">'+appState.suroHeaders.length+'주차</span></div></div><div class="flex gap-1"><button onclick="window._backupSingle(\'suro_scores\',\'csv\')" class="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[7px] hover:bg-blue-100 cursor-pointer">CSV</button><button onclick="window._backupSingle(\'suro_scores\',\'json\')" class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[7px] hover:bg-gray-200 cursor-pointer">JSON</button></div></div>'
+   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100"><div class="flex items-center gap-2 mb-1.5"><div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-gem text-blue-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">bail</span><span class="text-[8px] text-gray-400">'+(appState.bailHistory||[]).length+'건</span></div></div><div class="flex gap-1"><button onclick="window._backupSingle(\'bail_history\',\'csv\')" class="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[7px] hover:bg-blue-100 cursor-pointer">CSV</button><button onclick="window._backupSingle(\'bail_history\',\'json\')" class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[7px] hover:bg-gray-200 cursor-pointer">JSON</button></div></div>'
+   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100"><div class="flex items-center gap-2 mb-1.5"><div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center"><i class="fas fa-exclamation-triangle text-red-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">penalty</span><span class="text-[8px] text-gray-400">'+(appState.penaltyHistory||[]).length+'건</span></div></div><div class="flex gap-1"><button onclick="window._backupSingle(\'penalty_history\',\'csv\')" class="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[7px] hover:bg-blue-100 cursor-pointer">CSV</button><button onclick="window._backupSingle(\'penalty_history\',\'json\')" class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[7px] hover:bg-gray-200 cursor-pointer">JSON</button></div></div>'
+   +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100"><div class="flex items-center gap-2 mb-1.5"><div class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-book text-purple-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">records</span><span class="text-[8px] text-gray-400">영구보존</span></div></div><div class="flex gap-1"><button onclick="window._backupSingle(\'member_records\',\'csv\')" class="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[7px] hover:bg-blue-100 cursor-pointer">CSV</button><button onclick="window._backupSingle(\'member_records\',\'json\')" class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[7px] hover:bg-gray-200 cursor-pointer">JSON</button></div></div>'
    +'</div>'
    +'<div class="flex flex-wrap gap-2">'
    +'<button onclick="window._backupAll()" id="backupAllBtn" class="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-[10px] shadow hover:bg-emerald-600"><i class="fas fa-file-export mr-1"></i>전체 백업</button>'
@@ -7974,6 +7974,62 @@
    return '\uFEFF' + header + '\n' + rows.join('\n');
   };
 
+  window._backupSingle = async (tableName, format) => {
+   try {
+   window.showMsg(`${tableName} ${format.toUpperCase()} 다운로드 중...`, 'info');
+   const backup = await window._backupFetchAll();
+   const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+
+   const colDefs = {
+   members: ['id','name','guild','role','class','level','is_main','main_char_name','join_date'],
+   bail_history: ['id','member_name','guild','amount','reason','date','paid'],
+   penalty_history: ['id','member_name','guild','points','reason','date','is_private'],
+   operation_history: ['id','date','category','name','content'],
+   member_records: ['id','join_date','nickname','job_class','suro_score','join_guild','prev_guild','join_source','join_category','join_reason','leave_category','leave_reason','leave_date','referrer','status','last_verified']
+   };
+
+   let data, cols;
+   if (tableName === 'suro_scores') {
+   const periods = (backup.suro_periods || []).sort((a, b) => a.id - b.id);
+   const periodLabels = periods.map(p => p.period_label || `기간${p.id}`);
+   const memberScoreMap = {};
+   (backup.suro_scores || []).forEach(s => {
+   const key = s.member_id;
+   if (!memberScoreMap[key]) memberScoreMap[key] = { member_name: s.member_name, guild: s.guild, scores: {} };
+   memberScoreMap[key].scores[s.period_id] = s.score;
+   });
+   data = Object.values(memberScoreMap).map(m => {
+   const row = { '닉네임': m.member_name, '길드': m.guild };
+   periods.forEach(p => { row[p.period_label || `기간${p.id}`] = m.scores[p.id] || ''; });
+   return row;
+   });
+   cols = ['닉네임', '길드', ...periodLabels];
+   } else {
+   data = backup[tableName] || [];
+   cols = colDefs[tableName] || (data.length > 0 ? Object.keys(data[0]) : []);
+   }
+
+   if (!data || data.length === 0) { window.showMsg(`${tableName} 데이터가 없습니다.`, 'warning'); return; }
+
+   if (format === 'csv') {
+   const csv = window._toCSV(data, cols);
+   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+   const url = URL.createObjectURL(blob);
+   const a = document.createElement('a'); a.href = url; a.download = `${tableName}_${dateStr}.csv`; a.click();
+   URL.revokeObjectURL(url);
+   } else {
+   const json = JSON.stringify(data, null, 2);
+   const blob = new Blob([json], { type: 'application/json' });
+   const url = URL.createObjectURL(blob);
+   const a = document.createElement('a'); a.href = url; a.download = `${tableName}_${dateStr}.json`; a.click();
+   URL.revokeObjectURL(url);
+   }
+   window.showMsg(`${tableName} ${format.toUpperCase()} 다운로드 완료!`, 'success');
+   } catch(e) {
+   window.showMsg(`다운로드 실패: ${e.message || e}`, 'error');
+   }
+  };
+
   window._backupCSV = async () => {
    try {
    window.showMsg('CSV 백업 생성 중...', 'info');
@@ -7985,10 +8041,22 @@
    data: backup.members,
    cols: ['id','name','guild','role','class','level','is_main','main_char_name','join_date']
    },
-   suro_scores: {
-   data: backup.suro_scores,
-   cols: ['id','member_name','guild','period_label','score','date']
-   },
+   suro_scores: (function() {
+   const periods = (backup.suro_periods || []).sort((a, b) => a.id - b.id);
+   const periodLabels = periods.map(p => p.period_label || `기간${p.id}`);
+   const memberScoreMap = {};
+   (backup.suro_scores || []).forEach(s => {
+   const key = s.member_id;
+   if (!memberScoreMap[key]) memberScoreMap[key] = { member_name: s.member_name, guild: s.guild, scores: {} };
+   memberScoreMap[key].scores[s.period_id] = s.score;
+   });
+   const pivotData = Object.values(memberScoreMap).map(m => {
+   const row = { '닉네임': m.member_name, '길드': m.guild };
+   periods.forEach(p => { row[p.period_label || `기간${p.id}`] = m.scores[p.id] || ''; });
+   return row;
+   });
+   return { data: pivotData, cols: ['닉네임', '길드', ...periodLabels] };
+   })(),
    bail_history: {
    data: backup.bail_history,
    cols: ['id','member_name','guild','amount','reason','date','paid']
