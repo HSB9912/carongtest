@@ -7572,7 +7572,7 @@
    +'<div class="'+backupContent+'">'
    +'<div class="bg-white dark:bg-gray-800 p-4 lg:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 font-bold">'
    +'<h3 class="text-base lg:text-lg mb-2 text-gray-800"><i class="fas fa-download mr-2 text-emerald-500"></i>데이터 백업</h3>'
-   +'<p class="text-[10px] text-gray-400 mb-4">전체 DB를 JSON/CSV/ZIP으로 다운로드</p>'
+   +'<p class="text-[10px] text-gray-400 mb-4">전체 DB를 JSON/CSV 단일 파일로 다운로드</p>'
    +'<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">'
    +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-pink-100 rounded-lg flex items-center justify-center"><i class="fas fa-users text-pink-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">members</span><span class="text-[8px] text-gray-400">'+appState.members.length+'건</span></div></div>'
    +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center"><i class="fas fa-chart-line text-emerald-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">suro</span><span class="text-[8px] text-gray-400">'+appState.suroHeaders.length+'주차</span></div></div>'
@@ -7581,7 +7581,7 @@
    +'<div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex items-center gap-2"><div class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-book text-purple-500 text-[9px]"></i></div><div><span class="text-[10px] font-bold text-gray-700 block">records</span><span class="text-[8px] text-gray-400">영구보존</span></div></div>'
    +'</div>'
    +'<div class="flex flex-wrap gap-2">'
-   +'<button onclick="window._backupAll()" id="backupAllBtn" class="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-[10px] shadow hover:bg-emerald-600"><i class="fas fa-file-archive mr-1"></i>전체 백업</button>'
+   +'<button onclick="window._backupAll()" id="backupAllBtn" class="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-[10px] shadow hover:bg-emerald-600"><i class="fas fa-file-export mr-1"></i>전체 백업</button>'
    +'<button onclick="window._backupJSON()" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-[10px] hover:bg-gray-200"><i class="fas fa-file-code mr-1"></i>JSON</button>'
    +'<button onclick="window._backupCSV()" class="px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-[10px] hover:bg-blue-100"><i class="fas fa-file-csv mr-1"></i>CSV</button>'
    +'</div></div></div>'
@@ -7917,15 +7917,35 @@
    return all;
    }
 
+   const members = await fetchAll('members', 'name');
+   const suro_periods = await fetchAll('suro_periods', 'id');
+   const suro_scores_raw = await fetchAll('suro_scores', 'id');
+
+   const memberMap = {};
+   members.forEach(m => { memberMap[m.id] = m; });
+   const periodMap = {};
+   suro_periods.forEach(p => { periodMap[p.id] = p; });
+
+   const suro_scores = suro_scores_raw.map(s => {
+   const member = memberMap[s.member_id];
+   const period = periodMap[s.period_id];
+   return {
+   ...s,
+   member_name: member ? member.name : '',
+   guild: member ? (member.guild || '') : '',
+   period_label: period ? (period.period_label || '') : ''
+   };
+   });
+
    const backup = {
    _meta: {
    exported_at: new Date().toISOString(),
    source: SUPABASE_URL,
    version: APP_VERSION
    },
-   members: await fetchAll('members', 'name'),
-   suro_periods: await fetchAll('suro_periods', 'id'),
-   suro_scores: await fetchAll('suro_scores', 'id'),
+   members: members,
+   suro_periods: suro_periods,
+   suro_scores: suro_scores,
    bail_history: await fetchAll('bail_history', 'id'),
    penalty_history: await fetchAll('penalty_history', 'id'),
    operation_history: await fetchAll('operation_history', 'id'),
@@ -7934,7 +7954,7 @@
    member_records: await fetchAll('member_records', 'id')
    };
 
-   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-archive mr-2"></i>전체 백업 (ZIP)'; }
+   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-export mr-2"></i>전체 백업'; }
    return backup;
   };
 
@@ -7967,7 +7987,7 @@
    },
    suro_scores: {
    data: backup.suro_scores,
-   cols: ['id','member_id','period_id','score','date']
+   cols: ['id','member_name','guild','period_label','score','date']
    },
    bail_history: {
    data: backup.bail_history,
@@ -7987,37 +8007,22 @@
    }
    };
 
-   if (typeof JSZip !== 'undefined') {
-   const zip = new JSZip();
+   let combined = '\uFEFF';
    for (const [name, { data, cols }] of Object.entries(csvFiles)) {
    if (data && data.length > 0) {
-   zip.file(`${name}.csv`, window._toCSV(data, cols));
+   combined += `\n[${name}]\n`;
+   const rawCsv = window._toCSV(data, cols);
+   combined += rawCsv.replace(/^\uFEFF/, '') + '\n';
    }
    }
-   const blob = await zip.generateAsync({ type: 'blob' });
+   const blob = new Blob([combined], { type: 'text/csv;charset=utf-8' });
    const url = URL.createObjectURL(blob);
    const a = document.createElement('a');
    a.href = url;
-   a.download = `guild_backup_csv_${dateStr}.zip`;
+   a.download = `guild_backup_${dateStr}.csv`;
    a.click();
    URL.revokeObjectURL(url);
-   window.showMsg('CSV ZIP 백업 완료!', 'success');
-   } else {
-   for (const [name, { data, cols }] of Object.entries(csvFiles)) {
-   if (data && data.length > 0) {
-   const csv = window._toCSV(data, cols);
-   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-   const url = URL.createObjectURL(blob);
-   const a = document.createElement('a');
-   a.href = url;
-   a.download = `${name}_${dateStr}.csv`;
-   a.click();
-   URL.revokeObjectURL(url);
-   await new Promise(r => setTimeout(r, 300));
-   }
-   }
-   window.showMsg('CSV 파일들 다운로드 완료!', 'success');
-   }
+   window.showMsg('CSV 백업 완료! (단일 파일)', 'success');
    } catch(e) {
    window.showMsg('CSV 백업 실패: ' + (e.message || e), 'error');
    }
@@ -8189,50 +8194,16 @@
    try {
    const backup = await window._backupFetchAll();
    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-   const folderName = `guild_backup_${dateStr}`;
-
-   if (!window.JSZip) {
-   await new Promise((resolve, reject) => {
-   const s = document.createElement('script');
-   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-   s.onload = resolve;
-   s.onerror = reject;
-   document.head.appendChild(s);
-   });
-   }
-
-   const zip = new JSZip();
-   const folder = zip.folder(folderName);
-
-   folder.file('_meta.json', JSON.stringify(backup._meta, null, 2));
-
-   const tables = ['members','suro_periods','suro_scores','bail_history','penalty_history','operation_history','events','guide_pages'];
-   tables.forEach(t => {
-   folder.file(`${t}.json`, JSON.stringify(backup[t], null, 2));
-   });
-
-   folder.file('_full_backup.json', JSON.stringify(backup, null, 2));
-
-   if (backup.members.length > 0) {
-   const csvCols = Object.keys(backup.members[0]);
-   const csvRows = [csvCols.join(',')];
-   backup.members.forEach(m => {
-   csvRows.push(csvCols.map(c => {
-   const v = String(m[c] ?? '').replace(/"/g, '""');
-   return v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v}"` : v;
-   }).join(','));
-   });
-   folder.file('members.csv', '\uFEFF' + csvRows.join('\n'));
-   }
-
-   const blob = await zip.generateAsync({ type: 'blob' });
+   const json = JSON.stringify(backup, null, 2);
+   const blob = new Blob([json], { type: 'application/json' });
    const url = URL.createObjectURL(blob);
    const a = document.createElement('a');
    a.href = url;
-   a.download = `${folderName}.zip`;
+   a.download = `guild_backup_${dateStr}.json`;
    a.click();
    URL.revokeObjectURL(url);
-   window.showMsg(`백업 완료! (${tables.length}개 테이블)`, 'success');
+   const tables = ['members','suro_periods','suro_scores','bail_history','penalty_history','operation_history','events','guide_pages','member_records'];
+   window.showMsg(`전체 백업 완료! (${tables.length}개 테이블, 단일 JSON 파일)`, 'success');
    } catch(e) {
    console.error('백업 에러:', e);
    window.showMsg('백업 실패: ' + (e.message || e), 'error');
